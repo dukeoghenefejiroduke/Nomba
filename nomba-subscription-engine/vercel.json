@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "nomba-dashboard",
+  "builds": [
+    {
+      "src": "public/index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://<YOUR_BACKEND_URL>/api/$1"
+    }
+  ]
+}

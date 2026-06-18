@@ -1,0 +1,17 @@
+# render.yaml
+services:
+  - type: web
+    name: nomba-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node app.js
+    envVars:
+      - key: MONGO_URI
+        fromDatabase:
+          name: nomba-db
+          property: connectionString
+      - key: DEMO_MODE
+        value: "true"
+databases:
+  - name: nomba-db
+    plan: free
