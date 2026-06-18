@@ -36,7 +36,7 @@
             const userId = document.getElementById('userId').value;
             const tokenKey = document.getElementById('token').value;
             const amount = document.getElementById('amount').value;
-            const res = await fetch('/api/subscriptions', {
+            const res = await fetch('https://nomba.onrender.com/api/subscriptions', { // REPLACE WITH YOUR ACTUAL RENDER URL
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-idempotency-key': Date.now().toString() },
                 body: JSON.stringify({ userId, tokenKey, amount, billingCycle: 'monthly' })

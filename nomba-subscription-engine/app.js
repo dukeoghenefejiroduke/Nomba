@@ -2,10 +2,14 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const routes = require('./routes');
 const dunningService = require('./services/dunningService');
 
 const app = express();
+
+// Enable CORS for your Vercel frontend URL
+app.use(cors({ origin: 'https://nomba-beta.vercel.app' })); // REPLACE WITH YOUR ACTUAL VERCEL URL
 app.use(express.json());
 
 // DB connection - using environment variable or local default
