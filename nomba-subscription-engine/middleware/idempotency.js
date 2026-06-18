@@ -1,19 +1,24 @@
 // middleware/idempotency.js
-// Simplified idempotency check using a Map
-const seenKeys = new Map();
+const IdempotencyKey = require('../models/IdempotencyKey');
 
-const checkIdempotency = (req, res, next) => {
+const checkIdempotency = async (req, res, next) => {
   const key = req.headers['x-idempotency-key'];
   if (!key) {
     return res.status(400).json({ error: 'Idempotency-Key header missing' });
   }
-  if (seenKeys.has(key)) {
-    return res.status(409).json({ error: 'Duplicate request', existingResponse: seenKeys.get(key) });
+
+  try {
+    const existing = await IdempotencyKey.findOne({ key });
+    if (existing) {
+      return res.status(409).json({ error: 'Duplicate request already processed' });
+    }
+    
+    // Create the key record
+    await IdempotencyKey.create({ key });
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Idempotency check failed' });
   }
-  
-  // Store the key
-  seenKeys.set(key, { status: 'processing' });
-  next();
 };
 
 module.exports = checkIdempotency;

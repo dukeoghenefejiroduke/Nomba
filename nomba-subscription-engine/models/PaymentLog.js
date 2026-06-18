@@ -6,6 +6,7 @@ const paymentLogSchema = new mongoose.Schema({
   status: { type: String, enum: ['success', 'failed'], required: true },
   retryCount: { type: Number, default: 0 },
   errorMessage: String,
+  reason: String,
   createdAt: { type: Date, default: Date.now },
 });
 

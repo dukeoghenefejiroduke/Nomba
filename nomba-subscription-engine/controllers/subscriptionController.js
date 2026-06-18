@@ -32,7 +32,8 @@ const createSubscription = async (req, res) => {
         subscriptionId: subscription._id,
         amount,
         status: 'failed',
-        errorMessage: result.message
+        errorMessage: result.message,
+        reason: result.message // Mapping error message to reason
       });
       await Subscription.findByIdAndUpdate(subscription._id, { status: 'past_due' });
       

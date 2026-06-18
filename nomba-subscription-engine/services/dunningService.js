@@ -41,7 +41,8 @@ const processDunningQueue = async () => {
         amount: job.payload.amount,
         status: 'failed',
         retryCount: retryCount,
-        errorMessage: result.message
+        errorMessage: result.message,
+        reason: result.message
       });
 
       if (retryCount >= 3) {
