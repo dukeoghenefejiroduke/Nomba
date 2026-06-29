@@ -1,13 +1,16 @@
 // routes/analyticsRoutes.js
 const express = require('express');
 const router = express.Router();
-const analyticsService = require('../services/analyticsService');
+const DashboardMetrics = require('../models/DashboardMetrics');
 
-router.get('/transactions', async (req, res) => {
+router.get('/metrics', async (req, res) => {
     try {
-        const { dateFrom, dateTo } = req.query;
-        const data = await analyticsService.fetchTransactions(dateFrom, dateTo);
-        res.json(data);
+        // Fetch the latest metrics record
+        const metrics = await DashboardMetrics.findOne().sort({ createdAt: -1 });
+        if (!metrics) {
+            return res.json({ totalRevenue: 0, churnRiskRate: 0, autoRecoveryRate: 0 });
+        }
+        res.json(metrics);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

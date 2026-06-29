@@ -3,6 +3,9 @@ const Subscription = require('../models/Subscription');
 const Job = require('../models/Job');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('../services/nombaService');
+require('dotenv').config();
+
+const SUB_ACCOUNT_ID = process.env.NOMBA_SUB_ACCOUNT_ID;
 
 const createSubscription = async (req, res) => {
   try {
@@ -16,8 +19,8 @@ const createSubscription = async (req, res) => {
       nextBillingDate: new Date() // Simplified: immediate billing
     });
     
-    // Attempt Initial Charge
-    const result = await nombaService.chargeToken(subscription, amount);
+    // Attempt Initial Charge with scoped sub-account
+    const result = await nombaService.chargeToken(SUB_ACCOUNT_ID, subscription, amount);
     
     if (result.success) {
       await PaymentLog.create({
@@ -55,7 +58,8 @@ const createSubscription = async (req, res) => {
 const cancelOrder = async (req, res) => {
     try {
         const { orderReference } = req.body;
-        const result = await nombaService.cancelOrder(orderReference);
+        // Scope cancellation to sub-account
+        const result = await nombaService.cancelOrder(SUB_ACCOUNT_ID, orderReference);
         
         if (result.success) {
             res.json({ message: 'Order cancelled successfully' });
