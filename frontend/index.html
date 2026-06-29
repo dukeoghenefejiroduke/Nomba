@@ -8,23 +8,25 @@
     <!-- Dependencies -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+    <!-- Use a specific version for stability -->
+    <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 </head>
 <body>
-    <div id="root">Loading application...</div>
+    <div id="root">Loading dashboard...</div>
     
     <script type="text/javascript">
+        // Global error handler
         window.onerror = function(message, source, lineno, colno, error) {
+            console.error(message, error);
             document.getElementById('root').innerHTML = 
-                '<div style="color:red; padding:20px;">' +
-                '<h3>Error:</h3>' + message + '<br>' +
-                'Source: ' + source + ':' + lineno +
+                '<div style="color:white; padding:20px; background:#ef4444;">' +
+                '<h3>Dashboard Error:</h3>' + message + 
                 '</div>';
         };
     </script>
     
-    <!-- App -->
-    <script type="text/babel" src="App.js"></script>
+    <!-- App - Defer loading until dependencies are ready -->
+    <script type="text/babel" data-presets="react" src="App.js"></script>
 </body>
 </html>
