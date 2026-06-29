@@ -109,7 +109,7 @@ const App = () => {
                         {(data.logs || []).map(log => (
                             <tr key={log._id}>
                                 <td>{log._id}</td>
-                                <td><span className={`status-badge bg-${log.status?.replace('_', '-')}`}>{log.status}</span></td>
+                                <td><span className={'status-badge bg-' + (log.status ? log.status.replace('_', '-') : 'default')}>{log.status}</span></td>
                                 <td>${log.amount}</td>
                                 <td><button className="btn btn-primary" onClick={() => setSelectedTxn(log)}>Intervene</button></td>
                             </tr>
