@@ -106,10 +106,10 @@ const App = () => {
                 <table>
                     <thead><tr><th>ID</th><th>Status</th><th>Amount</th><th>Action</th></tr></thead>
                     <tbody>
-                        {data.logs.map(log => (
+                        {(data.logs || []).map(log => (
                             <tr key={log._id}>
                                 <td>{log._id}</td>
-                                <td><span className={`status-badge bg-${log.status.replace('_', '-')}`}>{log.status}</span></td>
+                                <td><span className={`status-badge bg-${log.status?.replace('_', '-')}`}>{log.status}</span></td>
                                 <td>${log.amount}</td>
                                 <td><button className="btn btn-primary" onClick={() => setSelectedTxn(log)}>Intervene</button></td>
                             </tr>
@@ -117,7 +117,6 @@ const App = () => {
                     </tbody>
                 </table>
             </div>
-
             {selectedTxn && <InterventionModal transaction={selectedTxn} onClose={() => setSelectedTxn(null)} onAction={handleAction} />}
         </div>
     );
