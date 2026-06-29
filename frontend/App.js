@@ -1,20 +1,23 @@
-const { useState, useEffect } = React;
+console.log("App.js is running!");
 
+const { useState, useEffect } = React;
 // Safely access Recharts components
 const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } = window.Recharts || {};
+
+const BACKEND_URL = 'https://nomba.onrender.com';
 
 const useBillingData = () => {
     const [data, setData] = useState({ subscriptions: [], logs: [] });
     
     const fetchData = async () => {
         try {
-            // Fetch from the backend API
-            const res = await fetch('/api/portal/u1'); 
+            // Fetch from the production backend API
+            const res = await fetch(`${BACKEND_URL}/api/portal/u1`); 
             const json = await res.json();
             setData(json);
         } catch (e) { 
             console.error("Fetch error:", e);
-            // Fallback for demonstration if backend is not reachable
+            // Fallback for demonstration
             setData({
                 subscriptions: [{ _id: 's1', status: 'active' }],
                 logs: [
@@ -51,9 +54,9 @@ const App = () => {
         
         console.log(`Action ${action} for ${selectedTxn._id}`);
         
-        // Connect to real endpoint
+        // Connect to production endpoint
         try {
-            await fetch('/api/portal/retry-auth', {
+            await fetch(`${BACKEND_URL}/api/portal/retry-auth`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ transactionId: selectedTxn._id, status: action === 'retry' ? 'approved' : 'declined' })
