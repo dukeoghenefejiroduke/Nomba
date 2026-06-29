@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nomba Billing Dashboard</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .success { color: green; }
+        .failed { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Billing Lifecycle Dashboard</h1>
+    <table id="subsTable">
+        <thead>
+            <tr>
+                <th>Sub ID</th>
+                <th>User ID</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        async function loadData() {
+            // Fetch subscriptions (Assuming an endpoint exists for this)
+            // For hackathon simplicity, we can fetch all or specific userId
+            const res = await fetch('/api/subscriptions'); // You might need to implement this
+            const data = await res.json();
+            const tbody = document.querySelector('#subsTable tbody');
+            
+            data.forEach(sub => {
+                const row = `<tr>
+                    <td>${sub._id}</td>
+                    <td>${sub.userId}</td>
+                    <td>${sub.status}</td>
+                    <td><button onclick="reconcile('${sub._id}')">Reconcile Now</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function reconcile(subId) {
+            // Need to link subId to a session ID for requery
+            const res = await fetch(`/api/subscriptions/requery/${subId}`);
+            const data = await res.json();
+            alert(JSON.stringify(data));
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

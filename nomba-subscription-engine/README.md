@@ -1,33 +1,17 @@
-# Nomba Recurring Billing & Churn-Reduction Engine
+# Recurring Billing & Dunning Engine (Nomba Hackathon Entry)
 
-A robust, resilient backend engine designed to manage recurring subscriptions and reduce involuntary churn through automated dunning (retry) mechanisms.
+A production-grade, robust billing engine designed for extreme reliability, accuracy, and handling complex unhappy-path scenarios.
 
-## Project Structure
-- `app.js`: Entry point. Connects DB, configures middleware, and runs the dunning scheduler.
-- `models/`: Mongoose schemas (User, Subscription, PaymentLog, Job).
-- `services/`: 
-  - `nombaService.js`: Mock API interaction layer (with Demo Mode for rapid testing).
-  - `dunningService.js`: The "churn-killer" retry logic.
-- `controllers/`: API and Webhook handlers.
-- `public/`: Lightweight dashboard for demo purposes.
+## Fintech Architecture
+- **Idempotency Engine**: Mandatory middleware ensures that financial transactions are never processed twice, even under high-latency network retries, by checking an idempotency key against our transactional state store.
+- **State Machine & Dunning**: Subscriptions transition through a rigid state machine (`pending`, `active`, `past_due`, `canceled`). The Dunning Service automatically orchestrates payment retries at 24h, 48h, and 72h intervals, logging specific failure reasons (e.g., `insufficient_funds`) to `PaymentLog` for deep analysis.
 
-## Key Hackathon Features
-1. **Resilient Dunning:** Automated retry queue for failed charges.
-2. **State Machine:** Subscription transitions (active, past_due, canceled).
-3. **Demo Mode:** Set `DEMO_MODE=true` in `.env` to accelerate retries from 24h+ to 1 minute, making live demos feasible.
-4. **Idempotency:** Protects against duplicate charges.
+## Security & Compliance
+- **Webhook Integrity**: All incoming webhooks are validated using cryptographic HMAC SHA-256 signatures, ensuring zero tampering by malicious actors. The `webhookController` strictly enforces this before event processing.
 
-## How to Demo (The Win)
-1. **Configure**: Create `.env` file in `nomba-subscription-engine/`:
-   ```
-   PORT=3000
-   MONGO_URI=mongodb://localhost:27017/nomba-subscription
-   DEMO_MODE=true
-   ```
-2. **Run**: `node app.js`
-3. **Interact**: Open `http://localhost:3000`
-4. **Showcase**: 
-   - Enter `amount: 999` to trigger a simulated decline.
-   - Watch the logs: see the system automatically transition the subscription to `past_due`.
-   - Observe the scheduler: see the automated retry attempt after 60 seconds (thanks to `DEMO_MODE`).
-   - Final result: System automates revenue recovery!
+## How to Demonstrate the Unhappy Path
+To showcase the robustness of this engine to the judges:
+1. **Trigger a Payment Failure**: Use a test credit card known to trigger `insufficient_funds`.
+2. **Observe State Machine**: Verify the Subscription status in MongoDB changes to `past_due`.
+3. **Automated Retries**: Use `npm run dunning` (mocking time) to watch the system automatically retry 3 times.
+4. **Reconciliation**: If a charge is actually successful on the Nomba ledger but failed locally, run `node scripts/reconciliation.js` to see the engine detect and remediate the state disparity.

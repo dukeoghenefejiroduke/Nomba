@@ -52,4 +52,120 @@ const createSubscription = async (req, res) => {
   }
 };
 
-module.exports = { createSubscription };
+const cancelOrder = async (req, res) => {
+    try {
+        const { orderReference } = req.body;
+        const result = await nombaService.cancelOrder(orderReference);
+        
+        if (result.success) {
+            res.json({ message: 'Order cancelled successfully' });
+        } else {
+            res.status(400).json({ message: 'Failed to cancel order', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getUserSavedCards = async (req, res) => {
+    try {
+        const { orderReference } = req.params;
+        const { otp } = req.query;
+        const result = await nombaService.getUserSavedCards(orderReference, otp);
+        
+        if (result.success) {
+            res.json({ cards: result.cards });
+        } else {
+            res.status(400).json({ message: 'Failed to fetch saved cards', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const submitCardDetails = async (req, res) => {
+    try {
+        const { orderReference, cardDetails, deviceInformation, saveCard } = req.body;
+        const result = await nombaService.submitCardDetails(orderReference, cardDetails, deviceInformation, saveCard);
+        
+        if (result.success) {
+            res.json({ message: 'Card details submitted successfully', data: result.data });
+        } else {
+            res.status(400).json({ message: 'Failed to submit card details', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getVirtualAccount = async (req, res) => {
+    try {
+        const { identifier } = req.params;
+        const result = await nombaService.getVirtualAccount(identifier);
+        
+        if (result.success) {
+            res.json({ account: result.data });
+        } else {
+            res.status(400).json({ message: 'Failed to fetch virtual account', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const requeryTransaction = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const result = await nombaService.requeryTransaction(sessionId);
+        
+        if (result.success) {
+            res.json({ data: result.data });
+        } else {
+            res.status(400).json({ message: 'Failed to requery transaction', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getCheckoutTransaction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { idType } = req.query;
+        const result = await nombaService.getCheckoutTransaction(id, idType || 'ORDER_REFERENCE');
+        
+        if (result.success) {
+            res.json({ transaction: result.data });
+        } else {
+            res.status(400).json({ message: 'Failed to fetch checkout transaction', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const updateTokenizedCardData = async (req, res) => {
+    try {
+        const { tokenKey, currentEmailAddress, newEmailAddress } = req.body;
+        const result = await nombaService.updateTokenizedCardData(tokenKey, currentEmailAddress, newEmailAddress);
+        
+        if (result.success) {
+            res.json({ message: 'Tokenized card data updated successfully', data: result.data });
+        } else {
+            res.status(400).json({ message: 'Failed to update tokenized card data', error: result.message });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getAllSubscriptions = async (req, res) => {
+    try {
+        const subscriptions = await Subscription.find();
+        res.json(subscriptions);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = { createSubscription, cancelOrder, getUserSavedCards, submitCardDetails, getVirtualAccount, requeryTransaction, getCheckoutTransaction, updateTokenizedCardData, getAllSubscriptions };

@@ -2,9 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const subscriptionRoutes = require('./subscriptionRoutes');
+const analyticsRoutes = require('./analyticsRoutes');
+const portalRoutes = require('./portalRoutes');
 const webhookController = require('../controllers/webhookController');
 
 router.use('/subscriptions', subscriptionRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/portal', portalRoutes);
 router.post('/webhook', webhookController.handleWebhook);
 
 module.exports = router;

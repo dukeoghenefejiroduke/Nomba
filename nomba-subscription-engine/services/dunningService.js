@@ -3,6 +3,7 @@ const Job = require('../models/Job');
 const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('./nombaService');
+const notificationService = require('./notificationService');
 
 const processDunningQueue = async () => {
   const now = new Date();
@@ -19,7 +20,11 @@ const processDunningQueue = async () => {
     
     if (result.success) {
       // Success: Restore subscription status, clear job, log transaction
-      await Subscription.findByIdAndUpdate(subscription._id, { status: 'active' });
+      await Subscription.findByIdAndUpdate(subscription._id, { 
+        status: 'active',
+        dunningRetryCount: 0,
+        lastFailureReason: null
+      });
       await PaymentLog.create({
         subscriptionId: subscription._id,
         amount: job.payload.amount,
@@ -29,26 +34,43 @@ const processDunningQueue = async () => {
       await job.save();
     } else {
       // Failure Handling (Dunning Loop):
-      // 1. Log the failure.
-      // 2. Check retry limit (max 3).
-      // 3. If limit reached, cancel subscription.
-      // 4. Otherwise, schedule next attempt with exponential back-off (24h/48h/72h).
-      //    (DEMO_MODE=true overrides this delay to 1 minute for rapid demonstration).
       const retryCount = (job.payload.retryCount || 0) + 1;
-      
+      // Map Nomba error to internal categories
+      const reason = result.code || 'unknown_failure';
+
+      await Subscription.findByIdAndUpdate(subscription._id, {
+        status: 'past_due',
+        dunningRetryCount: retryCount,
+        lastFailureReason: reason
+      });
+
       await PaymentLog.create({
         subscriptionId: subscription._id,
         amount: job.payload.amount,
         status: 'failed',
         retryCount: retryCount,
         errorMessage: result.message,
-        reason: result.message
+        reason: reason
       });
+
+      // Send failure notification
+      await notificationService.sendEmail(
+        subscription.email,
+        'Payment Failed - Action Required',
+        `Your payment for subscription ${subscription._id} failed: ${result.message}. Reason: ${reason}. We will retry in ${[24, 48, 72][retryCount - 1] || '72'} hours.`
+      );
 
       if (retryCount >= 3) {
         await Subscription.findByIdAndUpdate(subscription._id, { status: 'canceled' });
         job.status = 'failed';
         await job.save();
+        
+        // Send cancellation notification
+        await notificationService.sendEmail(
+            subscription.email,
+            'Subscription Canceled',
+            `Your subscription ${subscription._id} has been canceled due to multiple failed payment attempts.`
+        );
       } else {
         const delayHours = [24, 48, 72][retryCount - 1] || 72;
         const delayMs = process.env.DEMO_MODE === 'true' 
