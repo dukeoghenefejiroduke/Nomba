@@ -62,19 +62,19 @@ const refreshAccessToken = async () => {
   }
 };
 
-const createOrder = async (subscription, amount) => {
-  console.log(`[Nomba API] createOrder for Subscription: ${subscription._id}, Amount: ${amount}`);
+const createOrder = async (subAccountId, subscription, amount) => {
+  console.log(`[Nomba API] createOrder for Subscription: ${subscription._id}, Amount: ${amount}, SubAccount: ${subAccountId}`);
 
   try {
     let token = await authenticate();
     
     // Attempt request, if 401, try refreshing
     try {
-        return await callCreateOrder(token, subscription, amount);
+        return await callCreateOrder(token, subAccountId, subscription, amount);
     } catch (error) {
         if (error.response?.status === 401) {
             token = await refreshAccessToken();
-            return await callCreateOrder(token, subscription, amount);
+            return await callCreateOrder(token, subAccountId, subscription, amount);
         }
         throw error;
     }
@@ -84,8 +84,9 @@ const createOrder = async (subscription, amount) => {
   }
 };
 
-const callCreateOrder = async (token, subscription, amount) => {
+const callCreateOrder = async (token, subAccountId, subscription, amount) => {
     const response = await axios.post(`${BASE_URL}/v1/checkout/order`, {
+      subAccountId, // Included subAccountId in request body
       order: {
         orderReference: `order_${subscription._id}_${Date.now()}`,
         amount: amount.toFixed(2), // Ensure 2 decimal places
@@ -111,13 +112,16 @@ const callCreateOrder = async (token, subscription, amount) => {
     return { success: true, orderId: response.data.data.orderReference, checkoutLink: response.data.data.checkoutLink };
 };
 
-const chargeToken = async (subscription, amount) => {
-  console.log(`[Nomba API] chargeToken for Subscription: ${subscription._id}, Token: ${subscription.tokenKey}, Amount: ${amount}`);
+const chargeToken = async (subAccountId, subscription, amount) => {
+  console.log(`[Nomba API] chargeToken for Subscription: ${subscription._id}, SubAccount: ${subAccountId}, Token: ${subscription.tokenKey}, Amount: ${amount}`);
 
   try {
     const token = await authenticate();
+    // Scope the charge to the sub-account
     const response = await axios.post(`${BASE_URL}/v1/checkout/tokenized-card-payment`, {
-      tokenKey: subscription.tokenKey
+      subAccountId, 
+      tokenKey: subscription.tokenKey,
+      amount: amount.toFixed(2)
     }, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -133,12 +137,13 @@ const chargeToken = async (subscription, amount) => {
   }
 };
 
-const cancelOrder = async (orderReference) => {
-  console.log(`[Nomba API] cancelOrder for Reference: ${orderReference}`);
+const cancelOrder = async (subAccountId, orderReference) => {
+  console.log(`[Nomba API] cancelOrder for Reference: ${orderReference}, SubAccount: ${subAccountId}`);
 
   try {
     const token = await authenticate();
     const response = await axios.post(`${BASE_URL}/v1/checkout/order/cancel`, {
+      subAccountId,
       orderReference: orderReference
     }, {
       headers: {
@@ -284,7 +289,69 @@ const updateTokenizedCardData = async (tokenKey, currentEmailAddress, newEmailAd
     console.error('[Nomba API] updateTokenizedCardData error:', error.response?.data || error.message);
     return { success: false, message: error.response?.data?.description || 'API Error' };
   }
+// ... existing code ...
+
+const fetchSingleTransactionByRef = async (subAccountId, queryType, queryValue) => {
+  console.log(`[Nomba API] fetchSingleTransactionByRef for SubAccount: ${subAccountId}, ${queryType}: ${queryValue}`);
+
+  try {
+    const token = await authenticate();
+    // Using query parameters as per docs: transactionRef, merchantTxRef, orderReference, or orderId
+    const params = { [queryType]: queryValue };
+
+    const response = await axios.get(`${BASE_URL}/v1/transactions/accounts/${subAccountId}/single`, {
+      params,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'accountId': ACCOUNT_ID,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
+  } catch (error) {
+    console.error('[Nomba API] fetchSingleTransactionByRef error:', error.response?.data || error.message);
+    return { success: false, message: error.response?.data?.description || 'API Error' };
+  }
+// ... existing code ...
+
+const fetchTransactionsBySubAccount = async (subAccountId, params = {}) => {
+  console.log(`[Nomba API] fetchTransactionsBySubAccount for SubAccount: ${subAccountId}`);
+
+  try {
+    const token = await authenticate();
+
+    // params can contain: limit, cursor, dateFrom, dateTo
+    const response = await axios.get(`${BASE_URL}/v1/transactions/accounts/${subAccountId}`, {
+      params,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'accountId': ACCOUNT_ID,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
+  } catch (error) {
+    console.error('[Nomba API] fetchTransactionsBySubAccount error:', error.response?.data || error.message);
+    return { success: false, message: error.response?.data?.description || 'API Error' };
+  }
 };
 
-module.exports = { createOrder, chargeToken, cancelOrder, getUserSavedCards, submitCardDetails, getVirtualAccount, requeryTransaction, getCheckoutTransaction, updateTokenizedCardData, authenticate };
+module.exports = { 
+    createOrder, 
+    chargeToken, 
+    cancelOrder, 
+    getUserSavedCards, 
+    submitCardDetails, 
+    getVirtualAccount, 
+    requeryTransaction, 
+    getCheckoutTransaction, 
+    updateTokenizedCardData, 
+    authenticate,
+    fetchSingleTransactionByRef,
+    fetchTransactionsBySubAccount
+};
+
+
 

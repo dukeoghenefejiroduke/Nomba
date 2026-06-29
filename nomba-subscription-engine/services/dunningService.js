@@ -4,6 +4,9 @@ const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('./nombaService');
 const notificationService = require('./notificationService');
+require('dotenv').config();
+
+const SUB_ACCOUNT_ID = process.env.NOMBA_SUB_ACCOUNT_ID;
 
 const processDunningQueue = async () => {
   const now = new Date();
@@ -14,12 +17,13 @@ const processDunningQueue = async () => {
   for (const job of jobs) {
     console.log(`[Dunning] Processing job ${job._id} for subscription ${job.subscriptionId}`);
     const subscription = await Subscription.findById(job.subscriptionId);
-    
-    // Attempt charge
-    const result = await nombaService.chargeToken(subscription, job.payload.amount);
-    
+
+    // Attempt charge with sub-account scoping
+    const result = await nombaService.chargeToken(SUB_ACCOUNT_ID, subscription, job.payload.amount);
+
     if (result.success) {
-      // Success: Restore subscription status, clear job, log transaction
+// ... existing code ...
+
       await Subscription.findByIdAndUpdate(subscription._id, { 
         status: 'active',
         dunningRetryCount: 0,
