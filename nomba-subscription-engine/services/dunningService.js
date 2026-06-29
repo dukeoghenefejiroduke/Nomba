@@ -1,4 +1,5 @@
 // services/dunningService.js
+const { classifyError, ERROR_CATEGORIES } = require('./errorClassifier');
 const Job = require('../models/Job');
 const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
@@ -18,12 +19,10 @@ const processDunningQueue = async () => {
     console.log(`[Dunning] Processing job ${job._id} for subscription ${job.subscriptionId}`);
     const subscription = await Subscription.findById(job.subscriptionId);
 
-    // Attempt charge with sub-account scoping
+    // Attempt charge
     const result = await nombaService.chargeToken(SUB_ACCOUNT_ID, subscription, job.payload.amount);
 
     if (result.success) {
-// ... existing code ...
-
       await Subscription.findByIdAndUpdate(subscription._id, { 
         status: 'active',
         dunningRetryCount: 0,
@@ -37,16 +36,9 @@ const processDunningQueue = async () => {
       job.status = 'processed';
       await job.save();
     } else {
-      // Failure Handling (Dunning Loop):
+      const reasonCode = result.code || 'UNKNOWN';
+      const category = classifyError(reasonCode);
       const retryCount = (job.payload.retryCount || 0) + 1;
-      // Map Nomba error to internal categories
-      const reason = result.code || 'unknown_failure';
-
-      await Subscription.findByIdAndUpdate(subscription._id, {
-        status: 'past_due',
-        dunningRetryCount: retryCount,
-        lastFailureReason: reason
-      });
 
       await PaymentLog.create({
         subscriptionId: subscription._id,
@@ -54,45 +46,55 @@ const processDunningQueue = async () => {
         status: 'failed',
         retryCount: retryCount,
         errorMessage: result.message,
-        reason: reason
+        reason: category
       });
 
-      // Send failure notification
-      await notificationService.sendEmail(
-        subscription.email,
-        'Payment Failed - Action Required',
-        `Your payment for subscription ${subscription._id} failed: ${result.message}. Reason: ${reason}. We will retry in ${[24, 48, 72][retryCount - 1] || '72'} hours.`
-      );
+      // Handle based on intelligent classification
+      switch (category) {
+        case ERROR_CATEGORIES.TRANSIENT_NETWORK:
+            // Immediate retry or short exponential backoff
+            await Job.create({
+                type: 'charge_retry',
+                subscriptionId: subscription._id,
+                payload: { ...job.payload, retryCount },
+                scheduledTime: new Date(now.getTime() + (5 * 60 * 1000)) // 5 minute delay
+            });
+            break;
+            
+        case ERROR_CATEGORIES.GATEWAY_DOWN:
+            // Longer backoff
+            await Job.create({
+                type: 'charge_retry',
+                subscriptionId: subscription._id,
+                payload: { ...job.payload, retryCount },
+                scheduledTime: new Date(now.getTime() + (60 * 60 * 1000)) // 1 hour delay
+            });
+            break;
+            
+        case ERROR_CATEGORIES.INSUFFICIENT_FUNDS:
+            // Transition to PENDING_AUTH state (requiring customer intervention)
+            await Subscription.findByIdAndUpdate(subscription._id, { status: 'pending_auth' });
+            await notificationService.sendEmail(
+                subscription.email,
+                'Action Required: Payment Failed',
+                'Your payment failed due to insufficient funds. Please update your payment method or approve a retry in the portal.'
+            );
+            break;
 
-      if (retryCount >= 3) {
-        await Subscription.findByIdAndUpdate(subscription._id, { status: 'canceled' });
-        job.status = 'failed';
-        await job.save();
-        
-        // Send cancellation notification
-        await notificationService.sendEmail(
-            subscription.email,
-            'Subscription Canceled',
-            `Your subscription ${subscription._id} has been canceled due to multiple failed payment attempts.`
-        );
-      } else {
-        const delayHours = [24, 48, 72][retryCount - 1] || 72;
-        const delayMs = process.env.DEMO_MODE === 'true' 
-            ? 60 * 1000 // 1 minute demo override
-            : delayHours * 60 * 60 * 1000;
-        
-        const nextScheduledTime = new Date(now.getTime() + delayMs);
-        
-        await Job.create({
-            type: 'charge_retry',
-            subscriptionId: subscription._id,
-            payload: { ...job.payload, retryCount },
-            scheduledTime: nextScheduledTime
-        });
-        
-        job.status = 'processed';
-        await job.save();
+        case ERROR_CATEGORIES.HARD_FAILURE:
+        default:
+            // Cancel immediately
+            await Subscription.findByIdAndUpdate(subscription._id, { status: 'canceled' });
+            await notificationService.sendEmail(
+                subscription.email,
+                'Subscription Canceled',
+                `Your subscription has been canceled due to a non-recoverable error: ${reasonCode}.`
+            );
+            break;
       }
+      
+      job.status = 'processed';
+      await job.save();
     }
   }
 };

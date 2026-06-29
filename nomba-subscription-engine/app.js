@@ -19,13 +19,25 @@ mongoose.connect(mongoUri)
   .catch(err => console.error('Failed to connect to MongoDB', err));
 
 // Routes
-app.use(express.static('public'));
+// ... existing code ...
 app.use('/api', routes);
 
 // Dunning Scheduler
-// In a real app, use a proper task runner like BullMQ.
-// For the hackathon, a simple setInterval is sufficient.
-setInterval(dunningService.processDunningQueue, 30 * 1000); // Check every 30 seconds
+const jobProcessor = require('./services/jobProcessor');
+jobProcessor.startJobProcessor();
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Auth Reaper
+const reaperService = require('./services/reaperService');
+reaperService.startReaper();
+
+// Recovery Monitor
+const recoveryMonitor = require('./services/recoveryMonitor');
+recoveryMonitor.monitorGateway();
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;
+

@@ -2,6 +2,7 @@
 const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('../services/nombaService');
+const gatekeeperService = require('../services/gatekeeperService');
 
 // Get view for customer portal
 const getSubscriptionView = async (req, res) => {
@@ -33,4 +34,13 @@ const updatePaymentMethod = async (req, res) => {
     }
 };
 
-module.exports = { getSubscriptionView, updatePaymentMethod };
+const handleRetryAuthorization = async (req, res) => {
+    try {
+        await gatekeeperService.handleRetryRequest(req.body);
+        res.json({ message: 'Authorization request processed' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+module.exports = { getSubscriptionView, updatePaymentMethod, handleRetryAuthorization };
