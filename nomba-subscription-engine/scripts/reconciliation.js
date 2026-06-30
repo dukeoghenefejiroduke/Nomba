@@ -18,7 +18,7 @@ const reconcileTransactions = async () => {
     
     for (const log of logs) {
         // Querying by subscriptionId which we mapped to merchantTxRef in our controller
-        const nombaData = await nombaService.requeryTransaction(log.subscriptionId.toString());
+        const nombaData = await nombaService.requeryTransaction(SUB_ACCOUNT_ID, log.subscriptionId.toString());
         
         if (nombaData.success && nombaData.data.status === 'SUCCESS') {
             await PaymentLog.findByIdAndUpdate(log._id, { status: 'success' });

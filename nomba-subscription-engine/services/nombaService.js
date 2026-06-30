@@ -195,12 +195,13 @@ const getVirtualAccount = async (identifier) => {
   }
 };
 
-const requeryTransaction = async (sessionId) => {
-  console.log(`[Nomba API] requeryTransaction for SessionId: ${sessionId}`);
+const requeryTransaction = async (subAccountId, sessionId) => {
+  console.log(`[Nomba API] requeryTransaction for SessionId: ${sessionId}, SubAccount: ${subAccountId}`);
 
   try {
     const token = await authenticate();
     const response = await axios.get(`${BASE_URL}/v1/transactions/requery/${sessionId}`, {
+      params: { subAccountId },
       headers: getAuthHeaders(token)
     });
     
