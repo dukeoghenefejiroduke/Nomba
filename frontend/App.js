@@ -16,9 +16,13 @@ const NombaClient = {
             ...(options.method && options.method !== 'GET' && { 'x-idempotency-key': this.generateIdempotencyKey() })
         };
         const res = await fetch(`${BACKEND_URL}/api${endpoint}`, { ...options, headers });
-        if (!res.ok) throw new Error('API Request Failed');
+        if (!res.ok) {
+            console.error(`API Request Failed: ${res.status} ${res.statusText} - ${endpoint}`);
+            throw new Error(`API Request Failed: ${res.status}`);
+        }
         return res.json();
-    }
+    },
+
 };
 
 const MetricCard = ({ title, value, status }) => (
