@@ -17,7 +17,11 @@ const NombaClient = {
             ...(NombaClient.token && { 'Authorization': `Bearer ${NombaClient.token}` }),
             ...(options.method && options.method !== 'GET' && { 'x-idempotency-key': this.generateIdempotencyKey() })
         };
-        const res = await fetch(`${BACKEND_URL}/api${endpoint}`, { ...options, headers });
+        // Explicitly construct absolute URL
+        const url = `${BACKEND_URL}/api${endpoint}`;
+        console.log("Fetching URL:", url);
+        
+        const res = await fetch(url, { ...options, headers });
         
         // Handle expected empty/not found states gracefully
         if (res.status === 404) return { status: 404, logs: [] };
