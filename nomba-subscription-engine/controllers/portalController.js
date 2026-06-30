@@ -1,4 +1,5 @@
 // controllers/portalController.js
+const mongoose = require('mongoose');
 const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('../services/nombaService');
@@ -7,8 +8,9 @@ const gatekeeperService = require('../services/gatekeeperService');
 // Get view for customer portal
 const getSubscriptionView = async (req, res) => {
     const { userId } = req.params;
-    if (!userId) {
-        return res.status(400).json({ error: 'Missing userId parameter' });
+    
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ error: 'Invalid userId format' });
     }
     
     try {
