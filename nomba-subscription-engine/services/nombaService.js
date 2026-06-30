@@ -277,75 +277,21 @@ const fetchTransactionsBySubAccount = async (subAccountId, params = {}) => {
   }
 };
 
-const getSubAccountBalance = async (subAccountId) => {
+const refundTransaction = async (transactionId, amount, accountNumber, bankCode) => {
   try {
     const token = await authenticate();
-    const response = await axios.get(`${BASE_URL}/v1/accounts/${subAccountId}/balance`, {
-      headers: getAuthHeaders(token)
-    });
-    
-    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
-  } catch (error) {
-    console.error('[Nomba API] getSubAccountBalance error:', error.response?.data || error.message);
-    return { success: false, message: error.response?.data?.description || 'API Error' };
-  }
-};
-
-const getParentAccountBalance = async () => {
-  try {
-    const token = await authenticate();
-    const response = await axios.get(`${BASE_URL}/v1/accounts/balance`, {
-      headers: getAuthHeaders(token)
-    });
-    
-    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
-  } catch (error) {
-    console.error('[Nomba API] getParentAccountBalance error:', error.response?.data || error.message);
-    return { success: false, message: error.response?.data?.description || 'API Error' };
-  }
-};
-
-const assignTerminal = async (serialNumber, terminalLabel) => {
-  try {
-    const token = await authenticate();
-    const response = await axios.post(`${BASE_URL}/v1/terminals/assign`, {
-        serialNumber,
-        terminalLabel
+    const response = await axios.post(`${BASE_URL}/v1/checkout/refund`, {
+        transactionId,
+        amount,
+        accountNumber,
+        bankCode
     }, {
       headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
   } catch (error) {
-    console.error('[Nomba API] assignTerminal error:', error.response?.data || error.message);
-    return { success: false, message: error.response?.data?.description || 'API Error' };
-  }
-};
-
-const getTerminals = async () => {
-  try {
-    const token = await authenticate();
-    const response = await axios.get(`${BASE_URL}/v1/terminals`, {
-      headers: getAuthHeaders(token)
-    });
-    
-    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
-  } catch (error) {
-    console.error('[Nomba API] getTerminals error:', error.response?.data || error.message);
-    return { success: false, message: error.response?.data?.description || 'API Error' };
-  }
-};
-
-const getTerminalStatus = async (terminalId) => {
-  try {
-    const token = await authenticate();
-    const response = await axios.get(`${BASE_URL}/v1/terminals/${terminalId}/status`, {
-      headers: getAuthHeaders(token)
-    });
-    
-    return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
-  } catch (error) {
-    console.error('[Nomba API] getTerminalStatus error:', error.response?.data || error.message);
+    console.error('[Nomba API] refundTransaction error:', error.response?.data || error.message);
     return { success: false, message: error.response?.data?.description || 'API Error' };
   }
 };
@@ -363,9 +309,5 @@ module.exports = {
     authenticate,
     fetchSingleTransactionByRef,
     fetchTransactionsBySubAccount,
-    getSubAccountBalance,
-    getParentAccountBalance,
-    assignTerminal,
-    getTerminals,
-    getTerminalStatus
+    refundTransaction
 };

@@ -88,12 +88,33 @@ const App = () => {
 
     const handleAction = async (action, transaction) => {
         try {
-            await NombaClient.request('/portal/retry-auth', {
-                method: 'POST',
-                body: JSON.stringify({ subscriptionId: transaction._id, status: action === 'retry' ? 'approved' : 'declined' })
-            });
+            if (action === 'cancel') {
+                await NombaClient.request('/subscriptions/cancel', {
+                    method: 'POST',
+                    body: JSON.stringify({ orderReference: transaction._id })
+                });
+            } else {
+                await NombaClient.request('/portal/retry-auth', {
+                    method: 'POST',
+                    body: JSON.stringify({ subscriptionId: transaction._id, status: action === 'retry' ? 'approved' : 'declined' })
+                });
+            }
             fetchData();
         } catch (e) { console.error("Action error:", e); }
+    };
+
+    const updateCard = async (transaction) => {
+        try {
+            const currentEmail = prompt("Enter current email:");
+            const newEmail = prompt("Enter new email:");
+            if (!currentEmail || !newEmail) return;
+
+            await NombaClient.request('/subscriptions/update-tokenized-card', {
+                method: 'POST',
+                body: JSON.stringify({ tokenKey: transaction.tokenKey, currentEmailAddress: currentEmail, newEmailAddress: newEmail })
+            });
+            alert('Card updated');
+        } catch (e) { console.error("Update card error:", e); }
     };
 
     const funnelData = [
@@ -167,6 +188,8 @@ const App = () => {
                                 <td>₦{log.amount}</td>
                                 <td>
                                     <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
+                                    <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
+                                    <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
                                 </td>
                             </tr>
                         ))}
