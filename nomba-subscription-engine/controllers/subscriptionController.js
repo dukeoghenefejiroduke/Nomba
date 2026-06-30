@@ -118,8 +118,12 @@ const getVirtualAccount = async (req, res) => {
 };
 
 const requeryTransaction = async (req, res) => {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Missing sessionId parameter' });
+    }
+    
     try {
-        const { sessionId } = req.params;
         const result = await nombaService.requeryTransaction(sessionId);
         
         if (result.success) {
@@ -128,7 +132,8 @@ const requeryTransaction = async (req, res) => {
             res.status(400).json({ message: 'Failed to requery transaction', error: result.message });
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[SubscriptionController] requeryTransaction error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 

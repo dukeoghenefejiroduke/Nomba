@@ -6,31 +6,44 @@ const gatekeeperService = require('../services/gatekeeperService');
 
 // Get view for customer portal
 const getSubscriptionView = async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ error: 'Missing userId parameter' });
+    }
+    
     try {
-        const { userId } = req.params;
         const subscriptions = await Subscription.find({ userId });
+        if (!subscriptions || subscriptions.length === 0) {
+            return res.status(404).json({ message: 'No subscriptions found for user' });
+        }
+        
         const logs = await PaymentLog.find({ subscriptionId: { $in: subscriptions.map(s => s._id) } });
         
         res.json({ subscriptions, logs });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[PortalController] getSubscriptionView error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
 // Handle update payment method
 const updatePaymentMethod = async (req, res) => {
+    const { subscriptionId, newTokenKey } = req.body;
+    if (!subscriptionId || !newTokenKey) {
+        return res.status(400).json({ error: 'Missing subscriptionId or newTokenKey' });
+    }
+
     try {
-        const { subscriptionId, newTokenKey } = req.body;
+        const sub = await Subscription.findByIdAndUpdate(subscriptionId, { tokenKey: newTokenKey }, { new: true });
         
-        // Update local record
-        await Subscription.findByIdAndUpdate(subscriptionId, { tokenKey: newTokenKey });
-        
-        // Re-validate tokenKey via Nomba (conceptually)
-        // Here you would call a Nomba endpoint to verify if the token is valid for charging
+        if (!sub) {
+            return res.status(404).json({ error: 'Subscription not found' });
+        }
         
         res.json({ message: 'Payment method updated and verified' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[PortalController] updatePaymentMethod error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
