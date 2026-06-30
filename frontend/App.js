@@ -111,9 +111,30 @@ const App = () => {
         );
     };
 
+    const createSubscription = async () => {
+        try {
+            await NombaClient.request('/subscriptions', {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: '507f1f1f8b1d4b0003b51616', // Using the hardcoded demo ID
+                    tokenKey: 'tok_' + Math.random().toString(36).substr(2, 9),
+                    amount: 5000,
+                    billingCycle: 'monthly'
+                })
+            });
+            fetchData();
+        } catch (e) { console.error("Create subscription error:", e); }
+    };
+
     return (
         <div className="dashboard">
             <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
+            
+            <div className="card" style={{marginBottom: '24px'}}>
+                <button className="btn btn-primary" onClick={createSubscription}>
+                    SIMULATE: CREATE SUBSCRIPTION
+                </button>
+            </div>
             
             <div className="card-grid">
                 <MetricCard title="Auto-Recovery Rate" value="85%" />
