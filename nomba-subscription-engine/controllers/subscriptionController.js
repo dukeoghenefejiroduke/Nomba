@@ -124,7 +124,7 @@ const requeryTransaction = async (req, res) => {
     }
     
     try {
-        const result = await nombaService.requeryTransaction(SUB_ACCOUNT_ID, sessionId);
+        const result = await nombaService.requeryTransaction(sessionId);
         
         if (result.success) {
             res.json({ data: result.data });

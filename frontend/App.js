@@ -20,8 +20,11 @@ const NombaClient = {
         const url = `${BACKEND_URL}/api${endpoint}`;
         const res = await fetch(url, { ...options, headers });
         
-        // --- FIX FOR ERROR 2: Handle 404 as "Empty Data", NOT as an error ---
+        // --- FIX: Handle 404 as "Empty Data", NOT as an error ---
         if (res.status === 404) return { status: 404, logs: [] };
+        
+        // --- FIX: Handle 400 as "API Error", NOT as a fatal promise rejection ---
+        if (res.status === 400) return await res.json();
         
         if (!res.ok) {
             throw new Error(`API Request Failed: ${res.status}`);

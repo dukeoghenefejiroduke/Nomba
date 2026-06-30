@@ -54,7 +54,7 @@ const handleRetryAuthorization = async (req, res) => {
         await gatekeeperService.handleRetryRequest(req.body);
         res.json({ message: 'Authorization request processed' });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.json({ error: error.message });
     }
 };
 
