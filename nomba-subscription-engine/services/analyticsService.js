@@ -1,7 +1,7 @@
 // services/analyticsService.js
 const axios = require('axios');
 const nombaService = require('./nombaService'); // To reuse auth logic
-const BASE_URL = process.env.DEMO_MODE === 'true' ? 'https://sandbox.nomba.com' : 'https://api.nomba.com';
+const BASE_URL = process.env.APP_MODE === 'live' ? 'https://api.nomba.com' : 'https://sandbox.nomba.com';
 const ACCOUNT_ID = process.env.ACCOUNT_ID;
 
 const fetchTransactions = async (dateFrom, dateTo) => {

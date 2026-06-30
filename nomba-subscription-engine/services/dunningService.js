@@ -57,7 +57,7 @@ const processDunningQueue = async () => {
                 type: 'charge_retry',
                 subscriptionId: subscription._id,
                 payload: { ...job.payload, retryCount },
-                scheduledTime: new Date(now.getTime() + (5 * 60 * 1000)) // 5 minute delay
+                scheduledTime: new Date(now.getTime() + (process.env.APP_MODE === 'live' ? 5 * 60 * 1000 : 1000)) // 5 minute delay in live
             });
             break;
             
@@ -67,7 +67,7 @@ const processDunningQueue = async () => {
                 type: 'charge_retry',
                 subscriptionId: subscription._id,
                 payload: { ...job.payload, retryCount },
-                scheduledTime: new Date(now.getTime() + (60 * 60 * 1000)) // 1 hour delay
+                scheduledTime: new Date(now.getTime() + (process.env.APP_MODE === 'live' ? 60 * 60 * 1000 : 1000)) // 1 hour delay in live
             });
             break;
             

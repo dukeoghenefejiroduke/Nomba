@@ -2,38 +2,51 @@
 // API service for Nomba interactions
 const axios = require('axios');
 
-const BASE_URL = process.env.DEMO_MODE === 'true' ? 'https://sandbox.nomba.com' : 'https://api.nomba.com';
+const IS_LIVE = process.env.APP_MODE === 'live';
+const BASE_URL = IS_LIVE ? 'https://api.nomba.com' : 'https://sandbox.nomba.com';
 const ACCOUNT_ID = process.env.ACCOUNT_ID;
-const CLIENT_ID = process.env.DEMO_MODE === 'true' ? process.env.TEST_CLIENT_ID : process.env.LIVE_CLIENT_ID;
-const CLIENT_SECRET = process.env.DEMO_MODE === 'true' ? process.env.TEST_PRIVATE_KEY : process.env.LIVE_PRIVATE_KEY;
+const CLIENT_ID = IS_LIVE ? process.env.LIVE_CLIENT_ID : process.env.TEST_CLIENT_ID;
+const CLIENT_SECRET = IS_LIVE ? process.env.LIVE_PRIVATE_KEY : process.env.TEST_PRIVATE_KEY;
 
 let accessToken = null;
 let refreshToken = null;
+let pendingAuthPromise = null;
+
+const getAuthHeaders = (token) => ({
+    'Authorization': `Bearer ${token}`,
+    'accountId': ACCOUNT_ID,
+    'Content-Type': 'application/json'
+});
 
 const authenticate = async () => {
-  if (accessToken && refreshToken) {
-    return accessToken;
-  }
+  if (accessToken) return accessToken;
+  if (pendingAuthPromise) return pendingAuthPromise;
 
-  try {
-    const response = await axios.post(`${BASE_URL}/v1/auth/token/issue`, {
-      grant_type: 'client_credentials',
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET
-    }, {
-      headers: {
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
-    });
+  pendingAuthPromise = (async () => {
+    try {
+      const response = await axios.post(`${BASE_URL}/v1/auth/token/issue`, {
+        grant_type: 'client_credentials',
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET
+      }, {
+        headers: {
+          'accountId': ACCOUNT_ID,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    accessToken = response.data.data.access_token;
-    refreshToken = response.data.data.refresh_token;
-    return accessToken;
-  } catch (error) {
-    console.error('[Nomba API] Authentication error:', error.response?.data || error.message);
-    throw new Error('Authentication failed');
-  }
+      accessToken = response.data.data.access_token;
+      refreshToken = response.data.data.refresh_token;
+      return accessToken;
+    } catch (error) {
+      console.error('[Nomba API] Authentication error:', error.response?.data || error.message);
+      throw new Error('Authentication failed');
+    } finally {
+      pendingAuthPromise = null;
+    }
+  })();
+
+  return pendingAuthPromise;
 };
 
 const refreshAccessToken = async () => {
@@ -42,11 +55,7 @@ const refreshAccessToken = async () => {
       grant_type: 'refresh_token',
       refresh_token: refreshToken
     }, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(accessToken)
     });
 
     accessToken = response.data.data.access_token;
@@ -60,12 +69,33 @@ const refreshAccessToken = async () => {
   }
 };
 
-const createOrder = async (subAccountId, subscription, amount) => {
-  console.log(`[Nomba API] createOrder for Subscription: ${subscription._id}, Amount: ${amount}, SubAccount: ${subAccountId}`);
+const callCreateOrder = async (token, subAccountId, subscription, amount) => {
+    const response = await axios.post(`${BASE_URL}/v1/checkout/order`, {
+      subAccountId,
+      order: {
+        orderReference: `order_${subscription._id}_${Date.now()}`,
+        amount: amount.toFixed(2),
+        currency: 'NGN',
+        customerEmail: subscription.email || 'test@example.com',
+        customerId: subscription.userId || 'default_user_id',
+        accountId: subAccountId,
+        callbackUrl: 'https://merchant.com/callback',
+        orderMetaData: {
+            productName: subscription.planName || 'Subscription Plan',
+            internalRef: subscription._id
+        }
+      },
+      tokenizeCard: "true"
+    }, {
+      headers: getAuthHeaders(token)
+    });
 
+    return { success: true, orderId: response.data.data.orderReference, checkoutLink: response.data.data.checkoutLink };
+};
+
+const createOrder = async (subAccountId, subscription, amount) => {
   try {
     let token = await authenticate();
-    
     try {
         return await callCreateOrder(token, subAccountId, subscription, amount);
     } catch (error) {
@@ -81,37 +111,7 @@ const createOrder = async (subAccountId, subscription, amount) => {
   }
 };
 
-const callCreateOrder = async (token, subAccountId, subscription, amount) => {
-    const response = await axios.post(`${BASE_URL}/v1/checkout/order`, {
-      subAccountId,
-      order: {
-        orderReference: `order_${subscription._id}_${Date.now()}`,
-        amount: amount.toFixed(2),
-        currency: 'NGN',
-        customerEmail: subscription.email || 'test@example.com',
-        customerId: subscription.userId || 'default_user_id',
-        accountId: ACCOUNT_ID,
-        callbackUrl: 'https://merchant.com/callback',
-        orderMetaData: {
-            productName: subscription.planName || 'Subscription Plan',
-            internalRef: subscription._id
-        }
-      },
-      tokenizeCard: "true"
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    return { success: true, orderId: response.data.data.orderReference, checkoutLink: response.data.data.checkoutLink };
-};
-
 const chargeToken = async (subAccountId, subscription, amount) => {
-  console.log(`[Nomba API] chargeToken for Subscription: ${subscription._id}, SubAccount: ${subAccountId}, Token: ${subscription.tokenKey}, Amount: ${amount}`);
-
   try {
     const token = await authenticate();
     const response = await axios.post(`${BASE_URL}/v1/checkout/tokenized-card-payment`, {
@@ -119,11 +119,7 @@ const chargeToken = async (subAccountId, subscription, amount) => {
       tokenKey: subscription.tokenKey,
       amount: amount.toFixed(2)
     }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', transactionId: `txn_${Date.now()}`, message: response.data.description };
@@ -134,19 +130,13 @@ const chargeToken = async (subAccountId, subscription, amount) => {
 };
 
 const cancelOrder = async (subAccountId, orderReference) => {
-  console.log(`[Nomba API] cancelOrder for Reference: ${orderReference}, SubAccount: ${subAccountId}`);
-
   try {
     const token = await authenticate();
     const response = await axios.post(`${BASE_URL}/v1/checkout/order/cancel`, {
       subAccountId,
       orderReference: orderReference
     }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', message: response.data.description };
@@ -157,16 +147,11 @@ const cancelOrder = async (subAccountId, orderReference) => {
 };
 
 const getUserSavedCards = async (orderReference, otp) => {
-  console.log(`[Nomba API] getUserSavedCards for Reference: ${orderReference}`);
-
   try {
     const token = await authenticate();
     const response = await axios.get(`${BASE_URL}/v1/checkout/user-card/${orderReference}`, {
       params: { otp },
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', cards: response.data.data.tokenizedCardData, message: response.data.description };
@@ -177,8 +162,6 @@ const getUserSavedCards = async (orderReference, otp) => {
 };
 
 const submitCardDetails = async (orderReference, cardDetails, deviceInformation, saveCard = true) => {
-  console.log(`[Nomba API] submitCardDetails for Reference: ${orderReference}`);
-
   try {
     const token = await authenticate();
     const response = await axios.post(`${BASE_URL}/v1/checkout/checkout-card-detail`, {
@@ -188,11 +171,7 @@ const submitCardDetails = async (orderReference, cardDetails, deviceInformation,
       deviceInformation,
       key: ""
     }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -203,16 +182,10 @@ const submitCardDetails = async (orderReference, cardDetails, deviceInformation,
 };
 
 const getVirtualAccount = async (identifier) => {
-  console.log(`[Nomba API] getVirtualAccount for Identifier: ${identifier}`);
-
   try {
     const token = await authenticate();
     const response = await axios.get(`${BASE_URL}/v1/accounts/virtual/${identifier}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -228,11 +201,7 @@ const requeryTransaction = async (sessionId) => {
   try {
     const token = await authenticate();
     const response = await axios.get(`${BASE_URL}/v1/transactions/requery/${sessionId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -243,17 +212,11 @@ const requeryTransaction = async (sessionId) => {
 };
 
 const getCheckoutTransaction = async (id, idType = 'ORDER_REFERENCE') => {
-  console.log(`[Nomba API] getCheckoutTransaction for ID: ${id}, Type: ${idType}`);
-
   try {
     const token = await authenticate();
     const response = await axios.get(`${BASE_URL}/v1/checkout/transaction`, {
       params: { idType, id },
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -264,8 +227,6 @@ const getCheckoutTransaction = async (id, idType = 'ORDER_REFERENCE') => {
 };
 
 const updateTokenizedCardData = async (tokenKey, currentEmailAddress, newEmailAddress) => {
-  console.log(`[Nomba API] updateTokenizedCardData for Key: ${tokenKey}`);
-
   try {
     const token = await authenticate();
     const response = await axios.post(`${BASE_URL}/v1/checkout/tokenized-card-data`, {
@@ -273,11 +234,7 @@ const updateTokenizedCardData = async (tokenKey, currentEmailAddress, newEmailAd
       currentEmailAddress,
       newEmailAddress
     }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
     
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -288,19 +245,13 @@ const updateTokenizedCardData = async (tokenKey, currentEmailAddress, newEmailAd
 };
 
 const fetchSingleTransactionByRef = async (subAccountId, queryType, queryValue) => {
-  console.log(`[Nomba API] fetchSingleTransactionByRef for SubAccount: ${subAccountId}, ${queryType}: ${queryValue}`);
-
   try {
     const token = await authenticate();
     const params = { [queryType]: queryValue };
 
     const response = await axios.get(`${BASE_URL}/v1/transactions/accounts/${subAccountId}/single`, {
       params,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
 
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };
@@ -311,18 +262,12 @@ const fetchSingleTransactionByRef = async (subAccountId, queryType, queryValue) 
 };
 
 const fetchTransactionsBySubAccount = async (subAccountId, params = {}) => {
-  console.log(`[Nomba API] fetchTransactionsBySubAccount for SubAccount: ${subAccountId}`);
-
   try {
     const token = await authenticate();
 
     const response = await axios.get(`${BASE_URL}/v1/transactions/accounts/${subAccountId}`, {
       params,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accountId': ACCOUNT_ID,
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders(token)
     });
 
     return { success: response.data.code === '00', data: response.data.data, message: response.data.description };

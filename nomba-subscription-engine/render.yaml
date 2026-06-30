@@ -10,8 +10,8 @@ services:
         fromDatabase:
           name: nomba-db
           property: connectionString
-      - key: DEMO_MODE
-        value: "true"
+      - key: APP_MODE
+        value: "test"
 databases:
   - name: nomba-db
     plan: free

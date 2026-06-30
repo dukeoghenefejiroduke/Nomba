@@ -37,4 +37,16 @@ table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
 th { color: var(--zinc-400); text-transform: uppercase; font-size: 0.7rem; padding: 12px; }
 td { background: var(--zinc-800); padding: 16px; }
 
-.action-dropdown { padding: 6px 12px; background: var(--zinc-700); border: none; color: white; border-radius: 4px; cursor: pointer; }
+.action-btn { padding: 6px 12px; background: var(--zinc-700); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.simulate-btn { width: 100%; padding: 16px; background: var(--zinc-800); border: 1px solid var(--zinc-700); color: var(--zinc-50); cursor: pointer; text-align: left; font-family: inherit; }
+
+.custom-dropdown {
+    position: absolute; right: 0; top: 100%; background: var(--zinc-800); border: 1px solid var(--zinc-700);
+    border-radius: 4px; padding: 8px; z-index: 10; width: 150px;
+}
+.dropdown-header { color: var(--zinc-400); font-size: 0.7rem; margin-bottom: 4px; padding-left: 8px; }
+.dropdown-item { padding: 6px 8px; cursor: pointer; color: white; }
+.dropdown-item:hover { background: var(--zinc-700); }
+
+.chart-legend { display: flex; gap: 15px; font-size: 0.7rem; color: var(--zinc-400); }
+.legend-box { width: 10px; height: 10px; display: inline-block; margin-right: 4px; }
