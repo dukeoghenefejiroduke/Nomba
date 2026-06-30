@@ -1,123 +1,90 @@
-console.log("App.js is running!");
+const { useState, useEffect, useMemo } = React;
 
-const { useState, useEffect } = React;
-// Safely access Recharts components
-const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } = window.Recharts || {};
-
-const BACKEND_URL = 'https://nomba.onrender.com';
-
-const useBillingData = () => {
-    const [data, setData] = useState({ subscriptions: [], logs: [] });
-    
-    const fetchData = async () => {
-        try {
-            // Fetch from the production backend API
-            const res = await fetch(`${BACKEND_URL}/api/portal/u1`); 
-            const json = await res.json();
-            setData(json);
-        } catch (e) { 
-            console.error("Fetch error:", e);
-            // Fallback for demonstration
-            setData({
-                subscriptions: [{ _id: 's1', status: 'active' }],
-                logs: [
-                    { _id: 'l1', status: 'active', amount: 100 },
-                    { _id: 'l2', status: 'pending_auth', amount: 200 },
-                    { _id: 'l3', status: 'failed', amount: 50 }
-                ]
-            });
-        }
-    };
-    
-    useEffect(() => { fetchData(); }, []);
-    return { data, refetch: fetchData };
-};
-
-const InterventionModal = ({ transaction, onClose, onAction }) => (
-    <div className="modal-backdrop">
-        <div className="modal">
-            <h3>Intervene: {transaction._id}</h3>
-            <p>Select action for transaction {transaction._id}</p>
-            <button className="btn btn-primary" onClick={() => onAction('retry')}>Force Retry</button>
-            <button className="btn" onClick={() => onAction('pause')}>Pause Retries</button>
-            <button className="btn" onClick={onClose}>Close</button>
-        </div>
+// --- Components ---
+const MetricCard = ({ title, value, status }) => (
+    <div className="card">
+        <h4 style={{color: 'var(--zinc-400)', fontSize: '0.7rem', textTransform: 'uppercase', margin: '0 0 8px'}}>{title}</h4>
+        <div style={{fontSize: '1.8rem', fontWeight: 'bold'}}>{value}</div>
+        {status && <span style={{fontSize: '0.7rem', color: status === 'Synced' ? 'var(--emerald-500)' : 'var(--red-500)'}}>● {status}</span>}
     </div>
 );
 
 const App = () => {
-    const { data, refetch } = useBillingData();
-    const [selectedTxn, setSelectedTxn] = useState(null);
+    const [logs, setLogs] = useState([
+        { _id: 'TXN-998', status: 'active', amount: 5000 },
+        { _id: 'TXN-999', status: 'pending_auth', amount: 3200 }
+    ]);
+    const [filter, setFilter] = useState('all');
 
-    const handleAction = async (action) => {
-        if (!selectedTxn) return;
-        
-        console.log(`Action ${action} for ${selectedTxn._id}`);
-        
-        // Connect to production endpoint
-        try {
-            await fetch(`${BACKEND_URL}/api/portal/retry-auth`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transactionId: selectedTxn._id, status: action === 'retry' ? 'approved' : 'declined' })
-            });
-            refetch();
-            setSelectedTxn(null);
-        } catch (e) {
-            console.error("Action error:", e);
-        }
-    };
+    const filteredLogs = useMemo(() => 
+        filter === 'all' ? logs : logs.filter(l => l.status === filter)
+    , [filter, logs]);
+
+    // Safety check for Recharts
+    const RechartsLib = window.Recharts || {};
+    const { ResponsiveContainer, AreaChart, Area } = RechartsLib;
 
     const funnelData = [
-        { name: 'Failed', value: 10 },
-        { name: 'Requested', value: 7 },
-        { name: 'Authorized', value: 5 },
-        { name: 'Recovered', value: 4 },
+        { name: 'Attempts', f: 100 }, { name: 'Failures', f: 40 },
+        { name: 'AuthReq', f: 20 }, { name: 'Recovered', f: 15 }
     ];
 
     return (
         <div className="dashboard">
-            <h1>Merchant Billing Dashboard</h1>
+            <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
             
             <div className="card-grid">
-                <div className="card"><h3>Total Revenue</h3><p>$10,000</p></div>
-                <div className="card"><h3>Churn Risk</h3><p>2%</p></div>
-                <div className="card"><h3>Pending Auth</h3><p>5</p></div>
-                <div className="card"><h3>Auto-Recovery</h3><p>85%</p></div>
+                <MetricCard title="Auto-Recovery Rate" value="85%" />
+                <MetricCard title="Revenue at Risk" value="₦4.2M" />
+                <MetricCard title="Reconciliation" value="Synced" status="Synced" />
             </div>
 
-            <div className="card" style={{height: '300px', marginBottom: '20px'}}>
-                <h3>Recovery Funnel</h3>
-                {ResponsiveContainer && BarChart ? (
+            <div className="card" style={{height: '250px', marginBottom: '24px'}}>
+                {ResponsiveContainer && AreaChart ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={funnelData} layout="vertical">
-                            <XAxis type="number" />
-                            <YAxis dataKey="name" type="category" />
-                            <Tooltip />
-                            <Bar dataKey="value" fill="#38bdf8" />
-                        </BarChart>
+                        <AreaChart data={funnelData}>
+                            <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
+                        </AreaChart>
                     </ResponsiveContainer>
                 ) : (
-                    <p>Loading charts...</p>
+                    <div style={{color: 'var(--zinc-400)'}}>Chart loading...</div>
                 )}
             </div>
 
             <div className="table-container">
+                <select className="action-dropdown" onChange={(e) => setFilter(e.target.value)} style={{marginBottom: '16px'}}>
+                    <option value="all">ALL STATUSES</option>
+                    <option value="active">ACTIVE</option>
+                    <option value="pending_auth">PENDING AUTH</option>
+                </select>
                 <table>
-                    <thead><tr><th>ID</th><th>Status</th><th>Amount</th><th>Action</th></tr></thead>
+                    <thead><tr><th>ID</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
                     <tbody>
-                        {(data.logs || []).map(log => (
+                        {filteredLogs.map(log => (
                             <tr key={log._id}>
                                 <td>{log._id}</td>
-                                <td><span className={'status-badge bg-' + (log.status ? log.status.replace('_', '-') : 'default')}>{log.status}</span></td>
-                                <td>${log.amount}</td>
-                                <td><button className="btn btn-primary" onClick={() => setSelectedTxn(log)}>Intervene</button></td>
+                                <td className={log.status === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
+                                    {log.status.toUpperCase()}
+                                </td>
+                                <td>₦{log.amount}</td>
+                                <td>
+                                    <select className="action-dropdown">
+                                        <option>ACTION</option>
+                                        <option>Force Retry</option>
+                                        <option>Pause Dunning</option>
+                                    </select>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            {selectedTxn && <InterventionModal transaction={selectedTxn} onClose={() => setSelectedTxn(null)} onAction={handleAction} />}
+            
+            <div className="card" style={{marginTop: '24px'}}>
+                <button className="btn btn-primary" onClick={() => setLogs([...logs, { _id: 'TXN-' + Math.floor(Math.random()*1000), status: 'pending_auth', amount: 1000 }])}>
+                    SIMULATE: TRIGGER EVENT
+                </button>
+            </div>
         </div>
     );
 };
