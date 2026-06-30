@@ -1,4 +1,6 @@
 const { useState, useEffect, useMemo } = React;
+// Safely access Recharts components
+const { ResponsiveContainer, AreaChart, Area } = window.Recharts || {};
 
 const BACKEND_URL = 'https://nomba.onrender.com';
 
@@ -16,15 +18,18 @@ const NombaClient = {
             ...(options.method && options.method !== 'GET' && { 'x-idempotency-key': this.generateIdempotencyKey() })
         };
         const res = await fetch(`${BACKEND_URL}/api${endpoint}`, { ...options, headers });
+        
+        // Handle expected empty/not found states gracefully
+        if (res.status === 404) return { status: 404, logs: [] };
+        
         if (!res.ok) {
-            console.error(`API Request Failed: ${res.status} ${res.statusText} - ${endpoint}`);
             throw new Error(`API Request Failed: ${res.status}`);
         }
         return res.json();
-    },
-
+    }
 };
 
+// --- Components ---
 const MetricCard = ({ title, value, status }) => (
     <div className="card">
         <h4 style={{color: 'var(--zinc-400)', fontSize: '0.7rem', textTransform: 'uppercase', margin: '0 0 8px'}}>{title}</h4>
@@ -37,15 +42,9 @@ const App = () => {
     const [logs, setLogs] = useState([]);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
-    const [rechartsLoaded, setRechartsLoaded] = useState(false);
-
-    useEffect(() => {
-        if (window.Recharts) setRechartsLoaded(true);
-    }, []);
 
     const fetchData = async () => {
         try {
-            // Using a valid 24-char hex string to pass backend ObjectId validation
             const data = await NombaClient.request('/portal/507f1f1f8b1d4b0003b51616');
             setLogs(data.logs || []);
         } catch (e) { console.error("Fetch error:", e); }
@@ -81,18 +80,6 @@ const App = () => {
         { name: 'AuthReq', f: 20 }, { name: 'Recovered', f: 15 }
     ];
 
-    const renderChart = () => {
-        if (!rechartsLoaded) return <div style={{color: 'var(--zinc-400)'}}>Loading Chart...</div>;
-        const { ResponsiveContainer, AreaChart, Area } = window.Recharts;
-        return (
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={funnelData}>
-                    <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
-                </AreaChart>
-            </ResponsiveContainer>
-        );
-    };
-
     return (
         <div className="dashboard">
             <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
@@ -104,7 +91,15 @@ const App = () => {
             </div>
 
             <div className="card" style={{height: '250px', marginBottom: '24px'}}>
-                {renderChart()}
+                {window.Recharts ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={funnelData}>
+                            <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div style={{color: 'var(--zinc-400)'}}>Loading Chart...</div>
+                )}
             </div>
 
             <div className="table-container">
