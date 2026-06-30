@@ -41,7 +41,8 @@ const App = () => {
 
     const fetchData = async () => {
         try {
-            const data = await NombaClient.request('/portal/u1');
+            // Using a valid 24-char hex string to pass backend ObjectId validation
+            const data = await NombaClient.request('/portal/507f1f1f8b1d4b0003b51616');
             setLogs(data.logs || []);
         } catch (e) { console.error("Fetch error:", e); }
     };
