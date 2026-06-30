@@ -117,12 +117,16 @@ const chargeToken = async (subAccountId, subscription, amount) => {
     const response = await axios.post(`${BASE_URL}/v1/checkout/tokenized-card-payment`, {
       subAccountId, 
       tokenKey: subscription.tokenKey,
-      amount: amount.toFixed(2)
+      order: {
+        amount: amount.toFixed(2),
+        currency: 'NGN',
+        orderReference: `retry_${subscription._id}_${Date.now()}`
+      }
     }, {
       headers: getAuthHeaders(token)
     });
     
-    return { success: response.data.code === '00', transactionId: `txn_${Date.now()}`, message: response.data.description };
+    return { success: response.data.code === '00', transactionId: response.data.data?.orderReference || `txn_${Date.now()}`, message: response.data.description };
   } catch (error) {
     console.error('[Nomba API] chargeToken error:', error.response?.data || error.message);
     return { success: false, message: error.response?.data?.description || 'API Error' };
