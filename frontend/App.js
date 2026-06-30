@@ -17,13 +17,10 @@ const NombaClient = {
             ...(NombaClient.token && { 'Authorization': `Bearer ${NombaClient.token}` }),
             ...(options.method && options.method !== 'GET' && { 'x-idempotency-key': this.generateIdempotencyKey() })
         };
-        // Explicitly construct absolute URL
         const url = `${BACKEND_URL}/api${endpoint}`;
-        console.log("Fetching URL:", url);
-        
         const res = await fetch(url, { ...options, headers });
         
-        // Handle expected empty/not found states gracefully
+        // --- FIX FOR ERROR 2: Handle 404 as "Empty Data", NOT as an error ---
         if (res.status === 404) return { status: 404, logs: [] };
         
         if (!res.ok) {
@@ -46,9 +43,25 @@ const App = () => {
     const [logs, setLogs] = useState([]);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
+    const [rechartsLoaded, setRechartsLoaded] = useState(false);
+
+    // --- FIX FOR ERROR 1: Robust verification that ALL required Recharts components are defined ---
+    useEffect(() => {
+        const checkRecharts = () => {
+            const Lib = window.Recharts;
+            if (Lib && Lib.ResponsiveContainer && Lib.AreaChart && Lib.Area) {
+                setRechartsLoaded(true);
+            }
+        };
+        checkRecharts();
+        // Fallback in case of race condition during script loading
+        const interval = setInterval(checkRecharts, 500);
+        return () => clearInterval(interval);
+    }, []);
 
     const fetchData = async () => {
         try {
+            // Using a valid 24-char hex string to pass backend ObjectId validation
             const data = await NombaClient.request('/portal/507f1f1f8b1d4b0003b51616');
             setLogs(data.logs || []);
         } catch (e) { console.error("Fetch error:", e); }
@@ -63,7 +76,8 @@ const App = () => {
     const triggerReconcile = async (sessionId) => {
         setReconStatus('Reconciling...');
         try {
-            await NombaClient.request(`/subscriptions/requery/${sessionId}`, { method: 'POST' });
+            // FIX: Requery is a GET request on the backend, changed from POST to GET
+            await NombaClient.request(`/subscriptions/requery/${sessionId}`, { method: 'GET' });
         } catch (e) { console.error(e); }
         setTimeout(() => setReconStatus('Synced'), 1500);
         fetchData();
@@ -84,6 +98,19 @@ const App = () => {
         { name: 'AuthReq', f: 20 }, { name: 'Recovered', f: 15 }
     ];
 
+    const renderChart = () => {
+        if (!rechartsLoaded) return <div style={{color: 'var(--zinc-400)'}}>Loading Chart...</div>;
+        
+        const { ResponsiveContainer, AreaChart, Area } = window.Recharts;
+        return (
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={funnelData}>
+                    <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
+                </AreaChart>
+            </ResponsiveContainer>
+        );
+    };
+
     return (
         <div className="dashboard">
             <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
@@ -95,15 +122,7 @@ const App = () => {
             </div>
 
             <div className="card" style={{height: '250px', marginBottom: '24px'}}>
-                {window.Recharts ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={funnelData}>
-                            <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div style={{color: 'var(--zinc-400)'}}>Loading Chart...</div>
-                )}
+                {renderChart()}
             </div>
 
             <div className="table-container">
