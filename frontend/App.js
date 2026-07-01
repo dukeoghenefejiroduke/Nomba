@@ -236,7 +236,11 @@ const App = () => {
                 <table>
                     <thead><tr><th>ID</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
                     <tbody>
-                        {(logs || []).filter(l => filter === 'all' || (subscriptions.find(s => s._id === l.subscriptionId)?.status === filter)).map(log => {
+                        {(logs || []).filter(l => {
+                            const sub = subscriptions.find(s => s._id === l.subscriptionId);
+                            const statusMatchesFilter = filter === 'all' || (sub && sub.status === filter);
+                            return statusMatchesFilter;
+                        }).map(log => {
                             const sub = subscriptions.find(s => s._id === log.subscriptionId);
                             const displayStatus = sub ? sub.status : log.status;
                             return (
