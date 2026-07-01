@@ -49,21 +49,6 @@ const App = () => {
     const [jobs, setJobs] = useState([]);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
-    const [rechartsLoaded, setRechartsLoaded] = useState(false);
-
-    // --- FIX FOR ERROR 1: Robust verification that ALL required Recharts components are defined ---
-    useEffect(() => {
-        const checkRecharts = () => {
-            const Lib = window.Recharts;
-            if (Lib && Lib.ResponsiveContainer && Lib.AreaChart && Lib.Area) {
-                setRechartsLoaded(true);
-            }
-        };
-        checkRecharts();
-        // Fallback in case of race condition during script loading
-        const interval = setInterval(checkRecharts, 500);
-        return () => clearInterval(interval);
-    }, []);
 
     const fetchData = async () => {
         try {
@@ -157,15 +142,26 @@ const App = () => {
     ];
 
     const renderChart = () => {
-        if (!rechartsLoaded) return <div style={{color: 'var(--zinc-400)'}}>Loading Chart...</div>;
-        
-        const { ResponsiveContainer, AreaChart, Area } = window.Recharts;
+        // Simple CSS-based funnel visualization
+        const funnel = [
+            { name: 'Attempts', value: 100, color: '#0ea5e9' },
+            { name: 'Failures', value: 40, color: '#f59e0b' },
+            { name: 'AuthReq', value: 20, color: '#8b5cf6' },
+            { name: 'Recovered', value: 15, color: '#10b981' }
+        ];
+
         return (
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={funnelData}>
-                    <Area type="monotone" dataKey="f" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} />
-                </AreaChart>
-            </ResponsiveContainer>
+            <div style={{display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-around', padding: '10px 0'}}>
+                {funnel.map((item, index) => (
+                    <div key={item.name} style={{display: 'flex', alignItems: 'center', height: '30px'}}>
+                        <div style={{width: '80px', fontSize: '0.8rem', color: 'var(--zinc-400)'}}>{item.name}</div>
+                        <div style={{flexGrow: 1, height: '100%', backgroundColor: 'var(--zinc-800)', borderRadius: '4px', overflow: 'hidden'}}>
+                            <div style={{width: `${item.value}%`, height: '100%', backgroundColor: item.color, transition: 'width 0.5s'}}></div>
+                        </div>
+                        <div style={{width: '40px', textAlign: 'right', fontSize: '0.8rem', fontWeight: 'bold'}}>{item.value}%</div>
+                    </div>
+                ))}
+            </div>
         );
     };
 
@@ -234,7 +230,7 @@ const App = () => {
                     <option value="pending_auth">PENDING AUTH</option>
                 </select>
                 <table>
-                    <thead><tr><th>ID</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
+                    <thead><tr><th>ID</th><th>STATUS</th><th>AMOUNT</th><th>DURATION</th><th>ACTIONS</th></tr></thead>
                     <tbody>
                         {(logs || []).filter(l => {
                             const sub = subscriptions.find(s => s._id === l.subscriptionId);
@@ -250,6 +246,7 @@ const App = () => {
                                     {displayStatus.toUpperCase()}
                                 </td>
                                 <td>₦{log.amount}</td>
+                                <td>{sub ? sub.billingCycle.toUpperCase() : '-'}</td>
                                 <td>
                                     {displayStatus === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
