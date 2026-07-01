@@ -44,6 +44,8 @@ const MetricCard = ({ title, value, status }) => (
 
 const App = () => {
     const [logs, setLogs] = useState([]);
+    const [metrics, setMetrics] = useState({ totalRevenue: 0, churnRiskRate: 0, autoRecoveryRate: 0 });
+    const [jobs, setJobs] = useState([]);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
     const [rechartsLoaded, setRechartsLoaded] = useState(false);
@@ -65,8 +67,14 @@ const App = () => {
     const fetchData = async () => {
         try {
             // Using a valid 24-char hex string to pass backend ObjectId validation
-            const data = await NombaClient.request('/portal/507f1f1f8b1d4b0003b51616');
+            const [data, metricsData, jobsData] = await Promise.all([
+                NombaClient.request('/portal/507f1f1f8b1d4b0003b51616'),
+                NombaClient.request('/analytics/metrics'),
+                NombaClient.request('/analytics/jobs?status=pending')
+            ]);
             setLogs(data.logs || []);
+            setMetrics(metricsData);
+            setJobs(jobsData || []);
         } catch (e) { console.error("Fetch error:", e); }
     };
 
@@ -161,13 +169,29 @@ const App = () => {
             </div>
             
             <div className="card-grid">
-                <MetricCard title="Auto-Recovery Rate" value="85%" />
-                <MetricCard title="Revenue at Risk" value="₦4.2M" />
+                <MetricCard title="Auto-Recovery Rate" value={`${metrics.autoRecoveryRate}%`} />
+                <MetricCard title="Revenue at Risk" value={`₦${metrics.totalRevenue.toLocaleString()}`} />
                 <MetricCard title="Reconciliation" value={reconStatus} status={reconStatus} />
             </div>
 
             <div className="card" style={{height: '250px', marginBottom: '24px'}}>
                 {renderChart()}
+            </div>
+
+            <div className="table-container" style={{marginBottom: '24px'}}>
+                <h3 style={{color: 'var(--zinc-400)', fontSize: '0.9rem', marginBottom: '16px'}}>ACTIVE JOBS</h3>
+                <table>
+                    <thead><tr><th>JOB ID</th><th>TYPE</th><th>STATUS</th></tr></thead>
+                    <tbody>
+                        {jobs.map(job => (
+                            <tr key={job._id}>
+                                <td>{job._id}</td>
+                                <td>{job.type}</td>
+                                <td>{job.status}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             <div className="table-container">
