@@ -45,7 +45,15 @@ const MetricCard = ({ title, value, status }) => (
 const App = () => {
     const [logs, setLogs] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
-    const [metrics, setMetrics] = useState({ totalRevenue: 0, churnRiskRate: 0, autoRecoveryRate: 0 });
+    const [metrics, setMetrics] = useState({ 
+        totalRevenue: 0, 
+        churnRiskRate: 0, 
+        autoRecoveryRate: 0,
+        totalAttempts: 0,
+        totalFailures: 0,
+        pendingAuth: 0,
+        successfulRecoveries: 0
+    });
     const [jobs, setJobs] = useState([]);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
@@ -142,12 +150,17 @@ const App = () => {
     ];
 
     const renderChart = () => {
-        // Use live metrics for funnel visualization
+        const total = metrics.totalAttempts || 1; // Prevent division by zero
+        const failurePct = (metrics.totalFailures / total) * 100;
+        const authReqPct = (metrics.pendingAuth / total) * 100;
+        const recoveredPct = (metrics.successfulRecoveries / total) * 100;
+
+        // Dynamic funnel visualization
         const funnel = [
             { name: 'Attempts', value: 100, color: '#0ea5e9' },
-            { name: 'Failures', value: 40, color: '#f59e0b' },
-            { name: 'AuthReq', value: 20, color: '#8b5cf6' },
-            { name: 'Recovered', value: metrics.autoRecoveryRate, color: '#10b981' }
+            { name: 'Failures', value: failurePct, color: '#f59e0b' },
+            { name: 'AuthReq', value: authReqPct, color: '#8b5cf6' },
+            { name: 'Recovered', value: recoveredPct, color: '#10b981' }
         ];
 
         return (
