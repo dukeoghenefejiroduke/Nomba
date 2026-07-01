@@ -44,6 +44,7 @@ const MetricCard = ({ title, value, status }) => (
 
 const App = () => {
     const [logs, setLogs] = useState([]);
+    const [subscriptions, setSubscriptions] = useState([]);
     const [metrics, setMetrics] = useState({ totalRevenue: 0, churnRiskRate: 0, autoRecoveryRate: 0 });
     const [jobs, setJobs] = useState([]);
     const [filter, setFilter] = useState('all');
@@ -73,6 +74,7 @@ const App = () => {
                 NombaClient.request('/analytics/jobs?status=pending')
             ]);
             setLogs(data.logs || []);
+            setSubscriptions(data.subscriptions || []);
             setMetrics(metricsData);
             setJobs(jobsData || []);
         } catch (e) { console.error("Fetch error:", e); }
@@ -234,24 +236,28 @@ const App = () => {
                 <table>
                     <thead><tr><th>ID</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
                     <tbody>
-                        {(logs || []).filter(l => filter === 'all' || l.status === filter).map(log => (
+                        {(logs || []).filter(l => filter === 'all' || (subscriptions.find(s => s._id === l.subscriptionId)?.status === filter)).map(log => {
+                            const sub = subscriptions.find(s => s._id === log.subscriptionId);
+                            const displayStatus = sub ? sub.status : log.status;
+                            return (
                             <tr key={log._id}>
                                 <td>{log._id}</td>
-                                <td className={log.status === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
-                                    {log.status.toUpperCase()}
+                                <td className={displayStatus === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
+                                    {displayStatus.toUpperCase()}
                                 </td>
                                 <td>₦{log.amount}</td>
                                 <td>
-                                    {log.status === 'pending_auth' && (
+                                    {displayStatus === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
                                     )}
-                                    {(log.status === 'active' || log.status === 'pending') && (
+                                    {(displayStatus === 'active' || displayStatus === 'pending') && (
                                         <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
                                     )}
                                     <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
