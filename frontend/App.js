@@ -296,6 +296,8 @@ const App = () => {
             </div>
             
             <TransactionDetailPanel data={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
-
+        </div>
+    );
+};
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
