@@ -29,7 +29,7 @@ const createSubscription = async (req, res) => {
         status: 'success'
       });
       // Transition subscription to active
-      const updatedSub = await Subscription.findByIdAndUpdate(subscription._id, { status: 'active' }, { new: true });
+      const updatedSub = await Subscription.findByIdAndUpdate(subscription._id, { status: 'active' }, { returnDocument: 'after' });
       res.json({ message: 'Subscription created and charged', subscription: updatedSub });
     } else {
       // Failed, add to Dunning Queue

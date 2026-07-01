@@ -36,7 +36,7 @@ const updatePaymentMethod = async (req, res) => {
     }
 
     try {
-        const sub = await Subscription.findByIdAndUpdate(subscriptionId, { tokenKey: newTokenKey }, { new: true });
+        const sub = await Subscription.findByIdAndUpdate(subscriptionId, { tokenKey: newTokenKey }, { returnDocument: 'after' });
         
         if (!sub) {
             return res.status(404).json({ error: 'Subscription not found' });
