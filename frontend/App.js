@@ -118,6 +118,11 @@ const App = () => {
     };
 
     const updateCard = async (transaction) => {
+        if (!transaction.tokenKey) {
+            alert('Update Failed: Token Key is missing for this transaction.');
+            return;
+        }
+
         try {
             const currentEmail = prompt("Enter current email:");
             const newEmail = prompt("Enter new email:");
@@ -157,7 +162,7 @@ const App = () => {
 
     const createSubscription = async () => {
         try {
-            await NombaClient.request('/subscriptions', {
+            const res = await NombaClient.request('/subscriptions', {
                 method: 'POST',
                 body: JSON.stringify({
                     userId: '507f1f1f8b1d4b0003b51616', // Using the hardcoded demo ID
@@ -166,8 +171,15 @@ const App = () => {
                     billingCycle: 'monthly'
                 })
             });
+            
+            if (res && res.message) {
+                alert(res.message);
+            }
             fetchData();
-        } catch (e) { console.error("Create subscription error:", e); }
+        } catch (e) { 
+            console.error("Create subscription error:", e); 
+            alert("Failed to create subscription");
+        }
     };
 
     return (
@@ -223,7 +235,9 @@ const App = () => {
                                 </td>
                                 <td>₦{log.amount}</td>
                                 <td>
-                                    <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
+                                    {log.status === 'pending_auth' && (
+                                        <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
+                                    )}
                                     <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
                                     <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
                                 </td>
