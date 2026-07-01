@@ -187,6 +187,28 @@ const App = () => {
         setSelectedTransaction(res);
     };
 
+    const createSubscription = async () => {
+        try {
+            const res = await NombaClient.request('/subscriptions', {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: '507f1f1f8b1d4b0003b51616', // Using the hardcoded demo ID
+                    tokenKey: 'tok_' + Math.random().toString(36).substr(2, 9),
+                    amount: 5000,
+                    billingCycle: 'monthly'
+                })
+            });
+            
+            if (res && res.message) {
+                alert(res.message);
+            }
+            fetchData();
+        } catch (e) { 
+            console.error("Create subscription error:", e); 
+            alert("Failed to create subscription");
+        }
+    };
+
     const TransactionDetailPanel = ({ data, onClose }) => {
         if (!data) return null;
         return (
