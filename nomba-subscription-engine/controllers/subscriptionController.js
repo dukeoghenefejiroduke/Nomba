@@ -28,7 +28,9 @@ const createSubscription = async (req, res) => {
         amount,
         status: 'success'
       });
-      res.json({ message: 'Subscription created and charged', subscription });
+      // Transition subscription to active
+      const updatedSub = await Subscription.findByIdAndUpdate(subscription._id, { status: 'active' }, { new: true });
+      res.json({ message: 'Subscription created and charged', subscription: updatedSub });
     } else {
       // Failed, add to Dunning Queue
       await PaymentLog.create({
@@ -62,6 +64,11 @@ const cancelOrder = async (req, res) => {
         const result = await nombaService.cancelOrder(SUB_ACCOUNT_ID, orderReference);
         
         if (result.success) {
+            // Find log to identify the subscription
+            const log = await PaymentLog.findById(orderReference);
+            if (log) {
+                await Subscription.findByIdAndUpdate(log.subscriptionId, { status: 'canceled' });
+            }
             res.json({ message: 'Order cancelled successfully' });
         } else {
             res.status(400).json({ message: 'Failed to cancel order', error: result.message });
