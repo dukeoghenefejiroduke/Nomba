@@ -125,8 +125,15 @@ const App = () => {
 
         try {
             const currentEmail = prompt("Enter current email:");
+            if (!currentEmail || currentEmail.trim() === "") {
+                alert('Update Failed: Current email is required.');
+                return;
+            }
             const newEmail = prompt("Enter new email:");
-            if (!currentEmail || !newEmail) return;
+            if (!newEmail || newEmail.trim() === "") {
+                alert('Update Failed: New email is required.');
+                return;
+            }
 
             const res = await NombaClient.request('/subscriptions/update-tokenized-card', {
                 method: 'POST',
@@ -238,7 +245,9 @@ const App = () => {
                                     {log.status === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
                                     )}
-                                    <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
+                                    {(log.status === 'active' || log.status === 'pending') && (
+                                        <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
+                                    )}
                                     <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
                                 </td>
                             </tr>
