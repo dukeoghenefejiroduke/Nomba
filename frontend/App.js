@@ -55,21 +55,25 @@ const App = () => {
         successfulRecoveries: 0
     });
     const [jobs, setJobs] = useState([]);
+    const [failureTrends, setFailureTrends] = useState([]);
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
 
     const fetchData = async () => {
         try {
             // Using a valid 24-char hex string to pass backend ObjectId validation
-            const [data, metricsData, jobsData] = await Promise.all([
+            const [data, metricsData, jobsData, trendsData] = await Promise.all([
                 NombaClient.request('/portal/507f1f1f8b1d4b0003b51616'),
                 NombaClient.request('/analytics/metrics'),
-                NombaClient.request('/analytics/jobs?status=pending')
+                NombaClient.request('/analytics/jobs?status=pending'),
+                NombaClient.request('/analytics/failure-trends')
             ]);
             setLogs(data.logs || []);
             setSubscriptions(data.subscriptions || []);
             setMetrics(metricsData);
             setJobs(jobsData || []);
+            setFailureTrends(trendsData || []);
         } catch (e) { console.error("Fetch error:", e); }
     };
 
@@ -178,31 +182,46 @@ const App = () => {
         );
     };
 
-    const createSubscription = async () => {
-        try {
-            const res = await NombaClient.request('/subscriptions', {
-                method: 'POST',
-                body: JSON.stringify({
-                    userId: '507f1f1f8b1d4b0003b51616', // Using the hardcoded demo ID
-                    tokenKey: 'tok_' + Math.random().toString(36).substr(2, 9),
-                    amount: 5000,
-                    billingCycle: 'monthly'
-                })
-            });
-            
-            if (res && res.message) {
-                alert(res.message);
-            }
-            fetchData();
-        } catch (e) { 
-            console.error("Create subscription error:", e); 
-            alert("Failed to create subscription");
-        }
+    const openTransactionDetails = async (log) => {
+        const res = await NombaClient.request(`/analytics/transaction-details/${log._id}`);
+        setSelectedTransaction(res);
     };
 
+    const TransactionDetailPanel = ({ data, onClose }) => {
+        if (!data) return null;
+        return (
+            <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000}}>
+                <div className="card" style={{width: '80%', maxWidth: '600px', maxHeight: '80%', overflowY: 'auto'}}>
+                    <h3>Transaction Audit: {data.log._id}</h3>
+                    <p>Status: {data.log.status}</p>
+                    <p>Amount: ₦{data.log.amount}</p>
+                    <h4>Retry Jobs</h4>
+                    <ul>{data.jobs.map(j => <li key={j._id}>{j.type} - {j.status}</li>)}</ul>
+                    <h4>Auth Requests</h4>
+                    <ul>{data.authReqs.map(a => <li key={a._id}>{a.authStatus}</li>)}</ul>
+                    <button onClick={onClose}>Close</button>
+                </div>
+            </div>
+        );
+    };
+
+    const SystemAlertCard = ({ trends }) => {
+        const alerts = trends.filter(t => t.count > 5); // Threshold: 5 failures/hour
+        if (alerts.length === 0) return null;
+        return (
+            <div className="card" style={{backgroundColor: '#ef4444', color: 'white', marginBottom: '24px'}}>
+                <h3>⚠️ System Alert</h3>
+                {alerts.map(a => <p key={a._id}>{a.count} failures for category: {a._id}</p>)}
+            </div>
+        );
+    };
+
+    // ... (App component render)
     return (
         <div className="dashboard">
             <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
+            
+            <SystemAlertCard trends={failureTrends} />
             
             <div className="card" style={{marginBottom: '24px'}}>
                 <button className="btn btn-primary" onClick={createSubscription}>
@@ -254,7 +273,7 @@ const App = () => {
                             const displayStatus = sub ? sub.status : log.status;
                             return (
                             <tr key={log._id}>
-                                <td>{log._id}</td>
+                                <td onClick={() => openTransactionDetails(log)} style={{cursor: 'pointer', color: '#0ea5e9'}}>{log._id}</td>
                                 <td className={displayStatus === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
                                     {displayStatus.toUpperCase()}
                                 </td>
@@ -276,13 +295,7 @@ const App = () => {
                 </table>
             </div>
             
-            <div className="card" style={{marginTop: '24px'}}>
-                <button className="btn btn-primary" onClick={() => triggerReconcile('TXN-999')}>
-                    SIMULATE: TRIGGER REQUERY
-                </button>
-            </div>
-        </div>
-    );
-};
+            <TransactionDetailPanel data={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
