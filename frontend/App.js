@@ -142,23 +142,23 @@ const App = () => {
     ];
 
     const renderChart = () => {
-        // Simple CSS-based funnel visualization
+        // Use live metrics for funnel visualization
         const funnel = [
             { name: 'Attempts', value: 100, color: '#0ea5e9' },
             { name: 'Failures', value: 40, color: '#f59e0b' },
             { name: 'AuthReq', value: 20, color: '#8b5cf6' },
-            { name: 'Recovered', value: 15, color: '#10b981' }
+            { name: 'Recovered', value: metrics.autoRecoveryRate, color: '#10b981' }
         ];
 
         return (
             <div style={{display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-around', padding: '10px 0'}}>
-                {funnel.map((item, index) => (
+                {funnel.map((item) => (
                     <div key={item.name} style={{display: 'flex', alignItems: 'center', height: '30px'}}>
                         <div style={{width: '80px', fontSize: '0.8rem', color: 'var(--zinc-400)'}}>{item.name}</div>
                         <div style={{flexGrow: 1, height: '100%', backgroundColor: 'var(--zinc-800)', borderRadius: '4px', overflow: 'hidden'}}>
                             <div style={{width: `${item.value}%`, height: '100%', backgroundColor: item.color, transition: 'width 0.5s'}}></div>
                         </div>
-                        <div style={{width: '40px', textAlign: 'right', fontSize: '0.8rem', fontWeight: 'bold'}}>{item.value}%</div>
+                        <div style={{width: '40px', textAlign: 'right', fontSize: '0.8rem', fontWeight: 'bold'}}>{Math.round(item.value)}%</div>
                     </div>
                 ))}
             </div>
