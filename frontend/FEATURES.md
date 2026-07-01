@@ -39,7 +39,7 @@ Use the dropdown menu to filter logs by status:
 *   **ID**: Transaction identifier.
 *   **STATUS**: Current subscription lifecycle status.
 *   **AMOUNT**: Charge amount in NGN.
-*   **DURATION**: Billing cycle frequency (e.g., MONTHLY, YEARLY).
+* **DURATION**: Time elapsed since subscription creation (e.g., 42h, 3d, 5m).
 *   **ACTIONS**: Intervention controls.
 
 ### Action Controls (Per-Transaction)

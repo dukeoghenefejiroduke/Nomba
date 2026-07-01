@@ -187,6 +187,19 @@ const App = () => {
         setSelectedTransaction(res);
     };
 
+    const formatDuration = (createdAt) => {
+        const start = new Date(createdAt);
+        const now = new Date();
+        const diffMs = now - start;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (diffDays > 0) return `${diffDays}d`;
+        if (diffHours > 0) return `${diffHours}h`;
+        return `${diffMinutes}m`;
+    };
+
     const createSubscription = async () => {
         try {
             const res = await NombaClient.request('/subscriptions', {
@@ -300,7 +313,7 @@ const App = () => {
                                     {displayStatus.toUpperCase()}
                                 </td>
                                 <td>₦{log.amount}</td>
-                                <td>{sub ? sub.billingCycle.toUpperCase() : '-'}</td>
+                                <td>{sub ? formatDuration(sub.createdAt) : '-'}</td>
                                 <td>
                                     {displayStatus === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
