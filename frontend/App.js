@@ -96,19 +96,25 @@ const App = () => {
 
     const handleAction = async (action, transaction) => {
         try {
+            let res;
             if (action === 'cancel') {
-                await NombaClient.request('/subscriptions/cancel', {
+                res = await NombaClient.request('/subscriptions/cancel', {
                     method: 'POST',
                     body: JSON.stringify({ orderReference: transaction._id })
                 });
             } else {
-                await NombaClient.request('/portal/retry-auth', {
+                res = await NombaClient.request('/portal/retry-auth', {
                     method: 'POST',
                     body: JSON.stringify({ subscriptionId: transaction._id, status: action === 'retry' ? 'approved' : 'declined' })
                 });
             }
-            fetchData();
-        } catch (e) { console.error("Action error:", e); }
+            
+            if (res && (res.error || (res.message && res.message.includes('Failed')))) {
+                alert(`Action Failed: ${res.error || res.message}`);
+            } else {
+                fetchData();
+            }
+        } catch (e) { console.error("Action error:", e); alert("Action Failed: Unexpected error"); }
     };
 
     const updateCard = async (transaction) => {
@@ -117,12 +123,18 @@ const App = () => {
             const newEmail = prompt("Enter new email:");
             if (!currentEmail || !newEmail) return;
 
-            await NombaClient.request('/subscriptions/update-tokenized-card', {
+            const res = await NombaClient.request('/subscriptions/update-tokenized-card', {
                 method: 'POST',
                 body: JSON.stringify({ tokenKey: transaction.tokenKey, currentEmailAddress: currentEmail, newEmailAddress: newEmail })
             });
-            alert('Card updated');
-        } catch (e) { console.error("Update card error:", e); }
+            
+            if (res && (res.error || (res.message && res.message.includes('Failed')))) {
+                alert(`Update Failed: ${res.error || res.message}`);
+            } else {
+                alert('Card updated');
+                fetchData();
+            }
+        } catch (e) { console.error("Update card error:", e); alert("Update Failed: Unexpected error"); }
     };
 
     const funnelData = [
