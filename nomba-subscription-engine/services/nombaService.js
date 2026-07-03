@@ -111,6 +111,8 @@ const createOrder = async (subAccountId, subscription, amount) => {
   }
 };
 
+const failedTransactionService = require('./failedTransactionService');
+
 const chargeToken = async (subAccountId, subscription, amount) => {
   try {
     const token = await authenticate();
@@ -128,6 +130,11 @@ const chargeToken = async (subAccountId, subscription, amount) => {
     
     return { success: response.data.code === '00', transactionId: response.data.data?.orderReference || `txn_${Date.now()}`, message: response.data.description };
   } catch (error) {
+    if (error.response?.status === 503) {
+      console.warn('[Nomba API] 503 Service Unavailable, logging to failed_queue.');
+      await failedTransactionService.logFailedTransaction(subscription, { subAccountId, amount, type: 'chargeToken' });
+      return { success: false, message: 'Service Temporarily Unavailable, job queued for retry' };
+    }
     console.error('[Nomba API] chargeToken error:', error.response?.data || error.message);
     return { success: false, message: error.response?.data?.description || 'API Error' };
   }

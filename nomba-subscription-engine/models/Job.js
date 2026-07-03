@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
-  type: { type: String, enum: ['charge_retry'], required: true },
+  type: { type: String, enum: ['charge_retry', 'failed_transaction'], required: true },
   subscriptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', required: true },
   payload: Object,
   scheduledTime: { type: Date, required: true, index: true },
