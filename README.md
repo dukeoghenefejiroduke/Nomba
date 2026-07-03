@@ -34,3 +34,15 @@ To maintain financial transparency and ensure secure, multi-tenant operations, t
 
 - **Authentication Scope (`ACCOUNT_ID`)**: All API authentication handshakes are authorized at the **Parent Account** level.
 - **Service Scope (`NOMBA_SUB_ACCOUNT_ID`)**: All financial operations—including creating orders, charging tokens, and performing reconciliation audits—are strictly scoped to the **Sub-Account ID**.
+
+---
+
+## 📚 Project Documentation Index
+
+To help you navigate the codebase and understand the design, here is the complete index of our project documentation:
+
+*   **[Core Subscription Engine (Backend README)](nomba-subscription-engine/README.md)**: Details the autonomous billing layer, core problem, state-machine-driven recovery, and smart-dunning backend logic.
+*   **[System Architecture](nomba-subscription-engine/ARCHITECTURE.md)**: Outlines the technical architecture, high-level Mermaid sequence, state machine lifecycle transitions, and the resiliency features (idempotency, logging).
+*   **[Merchant Console Features (Frontend Guide)](frontend/FEATURES.md)**: Complete guide to the React dashboard interface, real-time observability metrics, billing funnel chart, and merchant simulation panel.
+*   **[Project Handoff Summary](nomba-subscription-engine/HANDOFF.md)**: Hackathon handoff guide covering API readiness, local database setup, known bottlenecks, and future scaling pathways (e.g., BullMQ transition).
+

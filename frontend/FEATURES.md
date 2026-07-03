@@ -1,5 +1,7 @@
 # Nomba Orchestrator // Dashboard Features Guide
 
+[« Back to Root README](../README.md)
+
 This guide details the features available in the Nomba Orchestrator Merchant Console, allowing you to monitor billing health, intervene in payment lifecycles, and simulate scenarios.
 
 ---

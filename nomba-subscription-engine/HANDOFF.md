@@ -1,5 +1,7 @@
 # Project Handoff: Nomba Billing Engine
 
+[« Back to Core README](README.md) | [« Back to Root README](../README.md)
+
 This file serves as a handoff summary for rapid continuation during the hackathon.
 
 ## 1. API Readiness

@@ -55,4 +55,13 @@ We provide real-time visibility into the "Auto-Recovery Rate"—the percentage o
 
 ---
 
+## 📚 Related Documentation
+
+*   **[Root Project README](../README.md)**: The main entry point explaining the Nomba Orchestrator ecosystem, the problem space, and the core dunning/reconciliation business pillars.
+*   **[Detailed System Architecture](ARCHITECTURE.md)**: Deep dive into the architectural flow chart, state machine definition, and the robust idempotency layer.
+*   **[Project Handoff Guide](HANDOFF.md)**: Quick-start notes, current mock service layers, known scaling bottlenecks, and hackathon transition instructions.
+*   **[Dashboard Features Guide](../frontend/FEATURES.md)**: User manual for the live Merchant Console, active system jobs tracking, and mock simulation control panels.
+
+---
+
 *Built to scale, designed for resilience.*
