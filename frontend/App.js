@@ -153,10 +153,10 @@ const App = () => {
     };
 
     const renderChart = () => {
-        const total = (metrics?.totalAttempts || 0) || 1;
-        const failurePct = ((metrics?.totalFailures || 0) / total) * 100;
-        const authReqPct = ((metrics?.pendingAuth || 0) / total) * 100;
-        const recoveredPct = ((metrics?.successfulRecoveries || 0) / total) * 100;
+        const total = ((metrics && metrics.totalAttempts) || 0) || 1;
+        const failurePct = (((metrics && metrics.totalFailures) || 0) / total) * 100;
+        const authReqPct = (((metrics && metrics.pendingAuth) || 0) / total) * 100;
+        const recoveredPct = (((metrics && metrics.successfulRecoveries) || 0) / total) * 100;
 
         const funnel = [
             { name: 'Attempts', value: 100, color: '#0ea5e9' },
@@ -279,8 +279,8 @@ const App = () => {
             </div>
             
             <div className="card-grid">
-                <MetricCard title="Auto-Recovery Rate" value={`${metrics?.autoRecoveryRate || 0}%`} />
-                <MetricCard title="Revenue at Risk" value={`₦${(metrics?.totalRevenue || 0).toLocaleString()}`} />
+                <MetricCard title="Auto-Recovery Rate" value={`${(metrics && metrics.autoRecoveryRate) || 0}%`} />
+                <MetricCard title="Revenue at Risk" value={`₦${((metrics && metrics.totalRevenue) || 0).toLocaleString()}`} />
                 <MetricCard title="Reconciliation" value={reconStatus} status={reconStatus} />
             </div>
 
