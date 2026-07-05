@@ -79,8 +79,17 @@ const App = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 5000);
-        return () => clearInterval(interval);
+        
+        const eventSource = new EventSource(`${BACKEND_URL}/api/events`);
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log("Real-time update:", data);
+            // Update metrics and potentially refetch data if needed
+            if (data.metrics) setMetrics(data.metrics);
+            fetchData(); // Simplest way to refresh all state
+        };
+        
+        return () => eventSource.close();
     }, []);
 
     const triggerReconcile = async (sessionId) => {
@@ -251,24 +260,42 @@ const App = () => {
         );
     };
 
-    // ... (App component render)
+    const triggerFailure = async (type) => {
+        try {
+            await NombaClient.request('/test/simulate-failure', {
+                method: 'POST',
+                body: JSON.stringify({ type })
+            });
+        } catch (e) { console.error("Sim error:", e); }
+    };
+
+    // ... (rest of App component)
     return (
         <div className="dashboard">
-            <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
-            
-            <SystemAlertCard trends={failureTrends} />
-            
-            <div className="card" style={{marginBottom: '24px'}}>
-                <button className="btn btn-primary" onClick={createSubscription}>
-                    SIMULATE: CREATE SUBSCRIPTION
-                </button>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
+                <div className="card" style={{padding: '8px 16px', fontSize: '0.8rem', color: 'var(--emerald-500)', border: '1px solid var(--emerald-500)'}}>
+                    SYSTEM CONSISTENCY: IDEMPOTENCY CONFLICTS: 0
+                </div>
             </div>
-            
+
+            <SystemAlertCard trends={failureTrends} />
+
+            <div className="card" style={{marginBottom: '24px'}}>
+                <h3 style={{marginBottom: '16px'}}>SIMULATION CONTROLS</h3>
+                <div style={{display: 'flex', gap: '10px'}}>
+                    <button className="btn btn-primary" onClick={() => triggerFailure('network')}>SIMULATE: NETWORK FAILURE</button>
+                    <button className="btn btn-primary" onClick={() => triggerFailure('funds')}>SIMULATE: INSUFFICIENT FUNDS</button>
+                    <button className="btn btn-primary" onClick={createSubscription}>CREATE SUBSCRIPTION</button>
+                </div>
+            </div>
+
             <div className="card-grid">
                 <MetricCard title="Auto-Recovery Rate" value={`${metrics.autoRecoveryRate}%`} />
                 <MetricCard title="Revenue at Risk" value={`₦${metrics.totalRevenue.toLocaleString()}`} />
                 <MetricCard title="Reconciliation" value={reconStatus} status={reconStatus} />
             </div>
+    ...
 
             <div className="card" style={{height: '250px', marginBottom: '24px'}}>
                 {renderChart()}

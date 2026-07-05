@@ -5,9 +5,16 @@ const Subscription = require('../models/Subscription');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('./nombaService');
 const notificationService = require('./notificationService');
+const eventBus = require('../utils/events');
+const { calculateMetrics } = require('./metricService');
 require('dotenv').config();
 
 const SUB_ACCOUNT_ID = process.env.NOMBA_SUB_ACCOUNT_ID;
+
+const emitUpdate = async (message) => {
+    const metrics = await calculateMetrics();
+    eventBus.emit('tx_update', { message, metrics, timestamp: new Date() });
+};
 
 const processDunningQueue = async () => {
   const now = new Date();
@@ -35,6 +42,7 @@ const processDunningQueue = async () => {
       });
       job.status = 'processed';
       await job.save();
+      await emitUpdate('Subscription recovered successfully');
     } else {
       const reasonCode = result.code || 'UNKNOWN';
       const category = classifyError(reasonCode);
@@ -95,6 +103,7 @@ const processDunningQueue = async () => {
       
       job.status = 'processed';
       await job.save();
+      await emitUpdate(`Dunning retry failed for subscription ${subscription._id}`);
     }
   }
 };

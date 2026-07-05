@@ -3,9 +3,16 @@ const Subscription = require('../models/Subscription');
 const Job = require('../models/Job');
 const PaymentLog = require('../models/PaymentLog');
 const nombaService = require('../services/nombaService');
+const eventBus = require('../utils/events');
+const { calculateMetrics } = require('../services/metricService');
 require('dotenv').config();
 
 const SUB_ACCOUNT_ID = process.env.NOMBA_SUB_ACCOUNT_ID;
+
+const emitUpdate = async (message) => {
+    const metrics = await calculateMetrics();
+    eventBus.emit('tx_update', { message, metrics, timestamp: new Date() });
+};
 
 const createSubscription = async (req, res) => {
   try {
@@ -30,6 +37,7 @@ const createSubscription = async (req, res) => {
       });
       // Transition subscription to active
       const updatedSub = await Subscription.findByIdAndUpdate(subscription._id, { status: 'active' }, { returnDocument: 'after' });
+      await emitUpdate('Subscription created and charged successfully');
       res.json({ message: 'Subscription created and charged', subscription: updatedSub });
     } else {
       // Failed, add to Dunning Queue
@@ -50,6 +58,7 @@ const createSubscription = async (req, res) => {
         scheduledTime: new Date(Date.now() + 60 * 1000) // 1 minute delay for demo
       });
       
+      await emitUpdate('Initial subscription charge failed, dunning initiated');
       res.status(202).json({ message: 'Subscription created, initial charge failed, dunning initiated', subscription });
     }
   } catch (error) {
@@ -68,6 +77,7 @@ const cancelOrder = async (req, res) => {
             const log = await PaymentLog.findById(orderReference);
             if (log) {
                 await Subscription.findByIdAndUpdate(log.subscriptionId, { status: 'canceled' });
+                await emitUpdate('Subscription cancelled');
             }
             res.json({ message: 'Order cancelled successfully' });
         } else {
