@@ -62,7 +62,6 @@ const App = () => {
 
     const fetchData = async () => {
         try {
-            // Using a valid 24-char hex string to pass backend ObjectId validation
             const [data, metricsData, jobsData, trendsData] = await Promise.all([
                 NombaClient.request('/portal/507f1f1f8b1d4b0003b51616'),
                 NombaClient.request('/analytics/metrics'),
@@ -82,11 +81,8 @@ const App = () => {
         
         const eventSource = new EventSource(`${BACKEND_URL}/api/events`);
         eventSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log("Real-time update:", data);
-            // Update metrics and potentially refetch data if needed
-            if (data.metrics) setMetrics(data.metrics);
-            fetchData(); // Simplest way to refresh all state
+            console.log("Real-time update received");
+            fetchData();
         };
         
         return () => eventSource.close();
@@ -95,7 +91,6 @@ const App = () => {
     const triggerReconcile = async (sessionId) => {
         setReconStatus('Reconciling...');
         try {
-            // FIX: Requery is a GET request on the backend, changed from POST to GET
             await NombaClient.request(`/subscriptions/requery/${sessionId}`, { method: 'GET' });
         } catch (e) { console.error(e); }
         setTimeout(() => setReconStatus('Synced'), 1500);
@@ -157,18 +152,12 @@ const App = () => {
         } catch (e) { console.error("Update card error:", e); alert("Update Failed: Unexpected error"); }
     };
 
-    const funnelData = [
-        { name: 'Attempts', f: 100 }, { name: 'Failures', f: 40 },
-        { name: 'AuthReq', f: 20 }, { name: 'Recovered', f: 15 }
-    ];
-
     const renderChart = () => {
-        const total = metrics.totalAttempts || 1; // Prevent division by zero
-        const failurePct = (metrics.totalFailures / total) * 100;
-        const authReqPct = (metrics.pendingAuth / total) * 100;
-        const recoveredPct = (metrics.successfulRecoveries / total) * 100;
+        const total = (metrics?.totalAttempts || 0) || 1;
+        const failurePct = ((metrics?.totalFailures || 0) / total) * 100;
+        const authReqPct = ((metrics?.pendingAuth || 0) / total) * 100;
+        const recoveredPct = ((metrics?.successfulRecoveries || 0) / total) * 100;
 
-        // Dynamic funnel visualization
         const funnel = [
             { name: 'Attempts', value: 100, color: '#0ea5e9' },
             { name: 'Failures', value: failurePct, color: '#f59e0b' },
@@ -214,7 +203,7 @@ const App = () => {
             const res = await NombaClient.request('/subscriptions', {
                 method: 'POST',
                 body: JSON.stringify({
-                    userId: '507f1f1f8b1d4b0003b51616', // Using the hardcoded demo ID
+                    userId: '507f1f1f8b1d4b0003b51616',
                     tokenKey: 'tok_' + Math.random().toString(36).substr(2, 9),
                     amount: 5000,
                     billingCycle: 'monthly'
@@ -229,6 +218,15 @@ const App = () => {
             console.error("Create subscription error:", e); 
             alert("Failed to create subscription");
         }
+    };
+
+    const triggerFailure = async (type) => {
+        try {
+            await NombaClient.request('/test/simulate-failure', {
+                method: 'POST',
+                body: JSON.stringify({ type })
+            });
+        } catch (e) { console.error("Sim error:", e); }
     };
 
     const TransactionDetailPanel = ({ data, onClose }) => {
@@ -250,7 +248,7 @@ const App = () => {
     };
 
     const SystemAlertCard = ({ trends }) => {
-        const alerts = trends.filter(t => t.count > 5); // Threshold: 5 failures/hour
+        const alerts = trends.filter(t => t.count > 5);
         if (alerts.length === 0) return null;
         return (
             <div className="card" style={{backgroundColor: '#ef4444', color: 'white', marginBottom: '24px'}}>
@@ -260,16 +258,6 @@ const App = () => {
         );
     };
 
-    const triggerFailure = async (type) => {
-        try {
-            await NombaClient.request('/test/simulate-failure', {
-                method: 'POST',
-                body: JSON.stringify({ type })
-            });
-        } catch (e) { console.error("Sim error:", e); }
-    };
-
-    // ... (rest of App component)
     return (
         <div className="dashboard">
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -278,9 +266,9 @@ const App = () => {
                     SYSTEM CONSISTENCY: IDEMPOTENCY CONFLICTS: 0
                 </div>
             </div>
-
+            
             <SystemAlertCard trends={failureTrends} />
-
+            
             <div className="card" style={{marginBottom: '24px'}}>
                 <h3 style={{marginBottom: '16px'}}>SIMULATION CONTROLS</h3>
                 <div style={{display: 'flex', gap: '10px'}}>
@@ -289,13 +277,12 @@ const App = () => {
                     <button className="btn btn-primary" onClick={createSubscription}>CREATE SUBSCRIPTION</button>
                 </div>
             </div>
-
+            
             <div className="card-grid">
-                <MetricCard title="Auto-Recovery Rate" value={`${metrics.autoRecoveryRate}%`} />
-                <MetricCard title="Revenue at Risk" value={`₦${metrics.totalRevenue.toLocaleString()}`} />
+                <MetricCard title="Auto-Recovery Rate" value={`${metrics?.autoRecoveryRate || 0}%`} />
+                <MetricCard title="Revenue at Risk" value={`₦${(metrics?.totalRevenue || 0).toLocaleString()}`} />
                 <MetricCard title="Reconciliation" value={reconStatus} status={reconStatus} />
             </div>
-    ...
 
             <div className="card" style={{height: '250px', marginBottom: '24px'}}>
                 {renderChart()}
