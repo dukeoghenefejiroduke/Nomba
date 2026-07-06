@@ -266,7 +266,7 @@ const App = () => {
     };
 
     const SystemAlertCard = ({ trends }) => {
-        const alerts = trends.filter(t => t.count > 5);
+        const alerts = trends.filter(t => t.count > 0);
         if (alerts.length === 0) return null;
         return (
             <div className="card" style={{backgroundColor: '#ef4444', color: 'white', marginBottom: '24px'}}>
