@@ -69,7 +69,7 @@ const App = () => {
             const [data, metricsData, jobsData, trendsData] = await Promise.all([
                 NombaClient.request('/portal/507f1f1f8b1d4b0003b51616'),
                 NombaClient.request('/analytics/metrics'),
-                NombaClient.request('/analytics/jobs?status=pending'),
+                NombaClient.request('/analytics/jobs'),
                 NombaClient.request('/analytics/failure-trends')
             ]);
             setLogs(data.logs || []);

@@ -17,8 +17,9 @@ router.get('/metrics', async (req, res) => {
 
 router.get('/jobs', async (req, res) => {
     try {
-        const status = req.query.status;
-        const jobs = await Job.find({ status });
+        const { status } = req.query;
+        const query = status ? { status } : {};
+        const jobs = await Job.find(query);
         res.json(jobs);
     } catch (error) {
         res.status(500).json({ error: error.message });
