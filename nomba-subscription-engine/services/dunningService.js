@@ -26,6 +26,13 @@ const processDunningQueue = async () => {
     console.log(`[Dunning] Processing job ${job._id} for subscription ${job.subscriptionId}`);
     const subscription = await Subscription.findById(job.subscriptionId);
 
+    if (!subscription) {
+        console.error(`[Dunning] Subscription ${job.subscriptionId} not found. Marking job as failed.`);
+        job.status = 'failed';
+        await job.save();
+        continue;
+    }
+
     // Attempt charge
     const result = await nombaService.chargeToken(SUB_ACCOUNT_ID, subscription, job.payload.amount);
 
