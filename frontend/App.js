@@ -352,7 +352,7 @@ const App = () => {
                                     {(displayStatus === 'active' || displayStatus === 'pending') && (
                                         <button className="action-dropdown" onClick={() => handleAction('cancel', sub)}>Cancel</button>
                                     )}
-                                    <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
+                                    <button className="action-dropdown" onClick={() => updateCard(sub)}>Update Card</button>
                                 </td>
                             </tr>
                             );
