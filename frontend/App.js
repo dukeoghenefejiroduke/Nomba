@@ -16,16 +16,13 @@ const NombaClient = {
     generateIdempotencyKey: () => 'idemp_' + Math.random().toString(36).substr(2, 9),
     
     async request(endpoint, options = {}) {
-        console.log(`[NombaClient] Requesting ${endpoint}`, options);
         const headers = { 
             'Content-Type': 'application/json',
             ...(NombaClient.token && { 'Authorization': `Bearer ${NombaClient.token}` }),
             ...(options.method && options.method !== 'GET' && { 'x-idempotency-key': this.generateIdempotencyKey() })
         };
         const url = `${BACKEND_URL}/api${endpoint}`;
-        console.log(`[NombaClient] URL: ${url}`);
         const res = await fetch(url, { ...options, headers });
-        console.log(`[NombaClient] Response status: ${res.status}`);
         
         // --- FIX: Handle 404 as "Empty Data", NOT as an error ---
         if (res.status === 404) return { status: 404, logs: [] };
@@ -34,13 +31,9 @@ const NombaClient = {
         if (res.status === 400) return await res.json();
         
         if (!res.ok) {
-            const errText = await res.text();
-            console.error(`[NombaClient] API Request Failed: ${res.status} - ${errText}`);
             throw new Error(`API Request Failed: ${res.status}`);
         }
-        const data = await res.json();
-        console.log(`[NombaClient] Response data:`, data);
-        return data;
+        return res.json();
     }
 };
 
@@ -232,17 +225,15 @@ const App = () => {
     };
 
     const triggerFailure = async (type) => {
-        console.log(`[TriggerFailure] Attempting simulation for ${type}`);
         try {
-            const result = await NombaClient.request('/test/simulate-failure', {
+            await NombaClient.request('/test/simulate-failure', {
                 method: 'POST',
                 body: JSON.stringify({ type })
             });
-            console.log(`[TriggerFailure] Success:`, result);
             alert(`Simulated ${type} failure successfully!`);
             fetchData();
         } catch (e) { 
-            console.error("[TriggerFailure] Caught error:", e); 
+            console.error("Sim error:", e); 
             alert(`Simulation failed: ${e.message}`);
         }
     };
@@ -292,6 +283,7 @@ const App = () => {
                 <div style={{display: 'flex', gap: '10px'}}>
                     <button className="btn btn-primary" onClick={() => triggerFailure('network')}>SIMULATE: NETWORK FAILURE</button>
                     <button className="btn btn-primary" onClick={() => triggerFailure('funds')}>SIMULATE: INSUFFICIENT FUNDS</button>
+                    <button className="btn btn-primary" onClick={() => triggerFailure('expired')}>SIMULATE: EXPIRED CARD</button>
                     <button className="btn btn-primary" onClick={createSubscription}>CREATE SUBSCRIPTION</button>
                 </div>
             </div>

@@ -35,6 +35,9 @@ router.post('/simulate-failure', async (req, res) => {
         } else if (type === 'funds') {
             // Logical failure: Transition to pending_auth
             await Subscription.findByIdAndUpdate(subId, { status: 'pending_auth' });
+        } else if (type === 'expired') {
+            // Hard failure: Cancel subscription
+            await Subscription.findByIdAndUpdate(subId, { status: 'canceled' });
         }
 
         // Emit event to update dashboard
