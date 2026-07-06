@@ -349,8 +349,8 @@ const App = () => {
                                     {rawStatus === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
                                     )}
-                                    {(rawStatus === 'active' || rawStatus === 'pending') && (
-                                        <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
+                                    {(displayStatus === 'active' || displayStatus === 'pending') && (
+                                        <button className="action-dropdown" onClick={() => handleAction('cancel', sub)}>Cancel</button>
                                     )}
                                     <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>
                                 </td>

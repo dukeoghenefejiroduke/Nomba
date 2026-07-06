@@ -74,9 +74,14 @@ const cancelOrder = async (req, res) => {
         
         if (result.success) {
             // Find log to identify the subscription
-            const log = await PaymentLog.findById(orderReference);
+            // FIX: Search by subscriptionId, not orderReference/logId
+            const log = await PaymentLog.findOne({ subscriptionId: orderReference });
             if (log) {
                 await Subscription.findByIdAndUpdate(log.subscriptionId, { status: 'canceled' });
+                await emitUpdate('Subscription cancelled');
+            } else {
+                // Fallback: assume orderReference is the subscriptionId itself
+                await Subscription.findByIdAndUpdate(orderReference, { status: 'canceled' });
                 await emitUpdate('Subscription cancelled');
             }
             res.json({ message: 'Order cancelled successfully' });
@@ -173,6 +178,9 @@ const getCheckoutTransaction = async (req, res) => {
 const updateTokenizedCardData = async (req, res) => {
     try {
         const { tokenKey, currentEmailAddress, newEmailAddress } = req.body;
+        if (!tokenKey || !currentEmailAddress || !newEmailAddress) {
+            return res.status(400).json({ message: 'Missing required fields: tokenKey, currentEmailAddress, or newEmailAddress' });
+        }
         const result = await nombaService.updateTokenizedCardData(tokenKey, currentEmailAddress, newEmailAddress);
         
         if (result.success) {
