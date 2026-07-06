@@ -14,7 +14,10 @@ router.post('/simulate-failure', async (req, res) => {
             amount: 5000,
             status: 'failed',
             errorMessage: `Simulated ${type} failure`,
-            reason: type === 'network' ? 'TRANSIENT_NETWORK' : 'INSUFFICIENT_FUNDS'
+            reason: type === 'network' ? 'TRANSIENT_NETWORK' : 'INSUFFICIENT_FUNDS',
+            metadata: {
+                failureCategory: type === 'network' ? 'TRANSIENT_NETWORK' : 'INSUFFICIENT_FUNDS'
+            }
         });
 
         // Emit event to demonstrate real-time updates
