@@ -329,20 +329,27 @@ const App = () => {
                             return statusMatchesFilter;
                         }).map(log => {
                             const sub = subscriptions.find(s => s._id === log.subscriptionId);
-                            const displayStatus = sub ? sub.status : log.status;
+                            const rawStatus = sub ? sub.status : log.status;
+                            
+                            // Map to "Winning Script" terminology
+                            let displayStatus = rawStatus.toUpperCase();
+                            if (rawStatus === 'pending') displayStatus = 'RETRY_ALLOWED';
+                            if (rawStatus === 'pending_auth') displayStatus = 'AWAITING_AUTH';
+                            if (rawStatus === 'canceled') displayStatus = 'TERMINATED';
+
                             return (
                             <tr key={log._id}>
                                 <td onClick={() => openTransactionDetails(log)} style={{cursor: 'pointer', color: '#0ea5e9'}}>{log._id}</td>
-                                <td className={displayStatus === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
-                                    {displayStatus.toUpperCase()}
+                                <td className={rawStatus === 'active' ? 'status-active' : 'status-pending glow-pulse'}>
+                                    {displayStatus}
                                 </td>
                                 <td>₦{log.amount}</td>
                                 <td>{sub ? formatDuration(sub.createdAt) : '-'}</td>
                                 <td>
-                                    {displayStatus === 'pending_auth' && (
+                                    {rawStatus === 'pending_auth' && (
                                         <button className="action-dropdown" onClick={() => handleAction('retry', log)}>Force Retry</button>
                                     )}
-                                    {(displayStatus === 'active' || displayStatus === 'pending') && (
+                                    {(rawStatus === 'active' || rawStatus === 'pending') && (
                                         <button className="action-dropdown" onClick={() => handleAction('cancel', log)}>Cancel</button>
                                     )}
                                     <button className="action-dropdown" onClick={() => updateCard(log)}>Update Card</button>

@@ -29,15 +29,42 @@ router.post('/simulate-failure', async (req, res) => {
             await Job.create({
                 type: 'charge_retry',
                 subscriptionId: subId,
+                status: 'pending', // Explicitly set status
                 payload: { amount: 5000, retryCount: 1 },
-                scheduledTime: new Date(Date.now() + 2000) // Immediate retry in 2s
+                scheduledTime: new Date(Date.now() - 1000) // Scheduled in the past for immediate pickup
             });
         } else if (type === 'funds') {
-            // Logical failure: Transition to pending_auth
+            // Logical failure: Transition to pending_auth and notify
             await Subscription.findByIdAndUpdate(subId, { status: 'pending_auth' });
+            
+            // Re-update PaymentLog with correct category for reporting
+            await PaymentLog.findByIdAndUpdate(log._id, {
+                'metadata.failureCategory': 'INSUFFICIENT_FUNDS'
+            });
+
+            // Trigger notification (mock)
+            const notificationService = require('../services/notificationService');
+            await notificationService.sendEmail(
+                'customer@example.com',
+                'Action Required: Payment Failed',
+                'Your payment failed due to insufficient funds. Please approve a retry in the portal.'
+            );
         } else if (type === 'expired') {
-            // Hard failure: Cancel subscription
+            // Hard failure: Cancel subscription and notify
             await Subscription.findByIdAndUpdate(subId, { status: 'canceled' });
+            
+            // Re-update PaymentLog with correct category for reporting
+            await PaymentLog.findByIdAndUpdate(log._id, {
+                'metadata.failureCategory': 'HARD_FAILURE'
+            });
+
+            // Trigger notification (mock)
+            const notificationService = require('../services/notificationService');
+            await notificationService.sendEmail(
+                'customer@example.com',
+                'Subscription Canceled',
+                'Your subscription has been canceled due to an expired payment method.'
+            );
         }
 
         // Emit event to update dashboard
