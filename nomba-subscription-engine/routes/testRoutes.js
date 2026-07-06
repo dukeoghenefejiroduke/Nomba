@@ -37,8 +37,9 @@ router.post('/simulate-failure', async (req, res) => {
             // Logical failure: Transition to pending_auth and notify
             await Subscription.findByIdAndUpdate(subId, { status: 'pending_auth' });
             
-            // Re-update PaymentLog with correct category for reporting
+            // Re-update PaymentLog with correct status for tracking
             await PaymentLog.findByIdAndUpdate(log._id, {
+                status: 'FAILED_PENDING_AUTH',
                 'metadata.failureCategory': 'INSUFFICIENT_FUNDS'
             });
 

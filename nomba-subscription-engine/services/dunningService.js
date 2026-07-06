@@ -46,6 +46,7 @@ const processDunningQueue = async () => {
         subscriptionId: subscription._id,
         amount: job.payload.amount,
         status: 'success',
+        retryCount: job.payload.retryCount // Ensure retryCount is saved for metric tracking
       });
       job.status = 'processed';
       await job.save();
