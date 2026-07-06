@@ -26,6 +26,7 @@ DashboardMetrics.findOne = () => ({
 });
 
 PaymentLog.find = () => Promise.resolve([{ amount: 100 }]);
+PaymentLog.findById = () => Promise.resolve({ subscriptionId: new Types.ObjectId() });
 PaymentLog.create = () => Promise.resolve({});
 IdempotencyKey.findOne = () => Promise.resolve(null);
 IdempotencyKey.create = () => Promise.resolve({});
@@ -41,20 +42,21 @@ async function runTests() {
         const res2 = await request(app)
             .post('/api/subscriptions')
             .set('x-idempotency-key', 'test-key')
-            .send({ userId: 'u1', tokenKey: 't1', amount: 100 });
+            .send({ userId: '507f1f17bcf86cd799439011', tokenKey: 't1', amount: 100 });
         if (res2.statusCode !== 200) {
             console.error('POST /api/subscriptions failed with body:', res2.body);
         }
         console.log('POST /api/subscriptions:', res2.statusCode === 200 ? 'PASS' : 'FAIL');
 
-        const res3 = await request(app).post('/api/subscriptions/cancel').send({ orderReference: 'ref1' });
-        console.log('POST /api/subscriptions/cancel:', res3.statusCode === 200 ? 'PASS' : 'FAIL');
+        const res3 = await request(app).post('/api/subscriptions/cancel').send({ orderReference: '507f1f17bcf86cd799439011' });
+        console.log('POST /api/subscriptions/cancel:', res3.statusCode === 200 ? 'PASS' : `FAIL (body: ${JSON.stringify(res3.body)})`);
 
-        const res4 = await request(app).get('/api/subscriptions/saved-cards/ref1');
+        const res4 = await request(app).get('/api/subscriptions/saved-cards/507f1f17bcf86cd799439011');
         console.log('GET /api/subscriptions/saved-cards/:ref:', res4.statusCode === 200 ? 'PASS' : 'FAIL');
 
-        const res5 = await request(app).post('/api/subscriptions/submit-card').send({ orderReference: 'ref1' });
+        const res5 = await request(app).post('/api/subscriptions/submit-card').send({ orderReference: '507f1f17bcf86cd799439011' });
         console.log('POST /api/subscriptions/submit-card:', res5.statusCode === 200 ? 'PASS' : 'FAIL');
+
 
         const res6 = await request(app).get('/api/subscriptions/virtual-accounts/id1');
         console.log('GET /api/subscriptions/virtual-accounts/:id:', res6.statusCode === 200 ? 'PASS' : 'FAIL');
@@ -77,8 +79,8 @@ async function runTests() {
         console.log('GET /api/analytics/metrics:', res11.statusCode === 200 ? 'PASS' : 'FAIL');
 
         // --- Portal ---
-        const res12 = await request(app).get('/api/portal/u1');
-        console.log('GET /api/portal/u1:', res12.statusCode === 200 ? 'PASS' : 'FAIL');
+        const res12 = await request(app).get('/api/portal/507f1f17bcf86cd799439011');
+        console.log('GET /api/portal/507f1f17bcf86cd799439011:', res12.statusCode === 200 ? 'PASS' : `FAIL (body: ${JSON.stringify(res12.body)})`);
         
         const res13 = await request(app).post('/api/portal/update-payment').send({ subscriptionId: 's1', newTokenKey: 't1' });
         console.log('POST /api/portal/update-payment:', res13.statusCode === 200 ? 'PASS' : 'FAIL');
