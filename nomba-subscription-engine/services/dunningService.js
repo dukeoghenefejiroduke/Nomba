@@ -18,7 +18,7 @@ const emitUpdate = async (message) => {
 
 const processDunningQueue = async () => {
   const now = new Date();
-  const jobs = await Job.find({ status: 'pending', scheduledTime: { $lte: now } });
+  const jobs = await Job.find({ status: 'pending', type: 'charge_retry', scheduledTime: { $lte: now } });
 
   console.log(`[Dunning] Found ${jobs.length} jobs to process.`);
 
