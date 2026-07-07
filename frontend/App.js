@@ -63,8 +63,10 @@ const App = () => {
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [filter, setFilter] = useState('all');
     const [reconStatus, setReconStatus] = useState('Synced');
+    const [isWakingUp, setIsWakingUp] = useState(false);
 
     const fetchData = async () => {
+        const timer = setTimeout(() => setIsWakingUp(true), 1500);
         try {
             const [data, metricsData, jobsData, trendsData] = await Promise.all([
                 NombaClient.request('/portal/507f1f1f8b1d4b0003b51616'),
@@ -78,6 +80,10 @@ const App = () => {
             setJobs(jobsData || []);
             setFailureTrends(trendsData || []);
         } catch (e) { console.error("Fetch error:", e); }
+        finally {
+            clearTimeout(timer);
+            setIsWakingUp(false);
+        }
     };
 
     useEffect(() => {
@@ -269,6 +275,11 @@ const App = () => {
 
     return (
         <div className="dashboard">
+            {isWakingUp && (
+                <div style={{position: 'fixed', top: '10px', right: '10px', backgroundColor: 'var(--amber-500)', color: 'white', padding: '10px', borderRadius: '4px', zIndex: 1001, fontSize: '0.8rem'}}>
+                    Waking up server... (Render idle)
+                </div>
+            )}
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h1 style={{fontSize: '1.2rem', color: 'var(--zinc-400)', marginBottom: '32px'}}>NOMBA // ORCHESTRATOR // TERMINAL</h1>
                 <div className="card" style={{padding: '8px 16px', fontSize: '0.8rem', color: 'var(--emerald-500)', border: '1px solid var(--emerald-500)'}}>
