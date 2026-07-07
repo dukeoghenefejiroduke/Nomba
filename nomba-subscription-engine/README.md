@@ -2,8 +2,21 @@
 
 An autonomous, resilient billing layer for Nigerian merchants, designed to minimize revenue leakage through smart dunning and automated reconciliation.
 
+## 📜 The Resilience Manifesto
+At Nomba, we believe financial infrastructure must be inherently defensive. Our engine adheres to three core tenets:
+1. **Never Assume Connectivity:** Every request is designed for a world where networks fail. We use idempotency, retries, and reconciliation to handle the unpredictable.
+2. **Context is King:** We never blindly retry. We classify, analyze, and act based on the *reason* for failure, not just the fact *that* it failed.
+3. **Data Integrity is Non-Negotiable:** A local database is only as good as its sync with the source of truth (the Nomba ledger). We reconcile daily to ensure the ledger remains absolute.
+
 ## 🚀 The Core Problem: Revenue Leakage
 Traditional payment collections often fail due to network instability or expired credentials. Without a systematic recovery process, this leads directly to churn and lost revenue. Our engine solves this by treating billing as a state-machine-driven process.
+
+## 🧠 Nomba API Integration Logic
+Our engine treats the Nomba API as an untrusted but essential external dependency.
+* **Orchestration:** All interactions go through `nombaService.js`.
+* **Resilience:** We wrap all calls in error-handling wrappers that classify results (Transient vs Hard) before updating our internal state machine.
+* **Webhook Handling:** Our `webhookController.js` acts as the event bridge, ensuring that external API state changes are reflected in our internal `Subscription` and `PaymentLog` models instantly.
+
 
 ## 🏗️ Architecture
 ```mermaid
@@ -38,8 +51,10 @@ For logical failures (like insufficient funds), we protect merchant-customer rel
 ### 3. Automated Reconciliation (The "Trust-Builder")
 A proactive daily audit service cross-references local `PaymentLog` records against the Nomba bank ledger to identify discrepancies, ensuring the billing ledger is always auditable and trustworthy.
 
-### 4. Idempotency Protection
-To prevent double-billing in high-latency environments, every sensitive financial request must include an `x-idempotency-key`. Our middleware ensures no duplicate processing occurs.
+### 🛡️ Idempotency Guard (Financial Integrity)
+To prevent catastrophic double-charging in high-latency or unstable network environments—a critical pain point for merchants—every sensitive financial API request must include an `x-idempotency-key` header. 
+
+Our enterprise-grade middleware (`middleware/idempotency.js`) validates this key against an atomic record in MongoDB before allowing processing. If a duplicate key is detected, the system immediately returns a `409 Conflict` response, ensuring that even if network timeouts cause retry loops on the client side, the financial ledger remains pristine.
 
 ## ⚠️ The "Unhappy Path": How We Handle Failure
 1. **Trigger:** A payment request is submitted.
@@ -57,6 +72,7 @@ We provide real-time visibility into the "Auto-Recovery Rate"—the percentage o
 
 ## 📚 Related Documentation
 
+*   **[Final Submission Checklist](../CHECKLIST.md)**: A roadmap to help track submission progress, aligned with project implementation.
 *   **[Root Project README](../README.md)**: The main entry point explaining the Nomba Orchestrator ecosystem, the problem space, and the core dunning/reconciliation business pillars.
 *   **[Detailed System Architecture](ARCHITECTURE.md)**: Deep dive into the architectural flow chart, state machine definition, and the robust idempotency layer.
 *   **[Project Handoff Guide](HANDOFF.md)**: Quick-start notes, current mock service layers, known scaling bottlenecks, and hackathon transition instructions.
